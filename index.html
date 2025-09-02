@@ -49,6 +49,7 @@
   th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align: top; }
   th { background:#f8fafc; }
   @media print {
+  #resultsResponses { display:block !important; }
     header, .toolbar, .support, .notice, #landing, #intro + .card, #overviewBtn, .stepper { display:none !important; }
   /* Results will remain visible for printing */
   #summary { display:none !important; } /* ensure summary stays hidden per the new flow */
@@ -66,12 +67,7 @@
 	
 /* === v12.7 mobile refinements === */
 @media (max-width: 768px) {
-  
-  .likert label { white-space: normal; word-break: break-word; }
-  #resultsResponses, #sumDetails { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  #resultsResponses table, #sumDetails table { table-layout: fixed; width:100%; }
-  #resultsResponses th, #resultsResponses td, #sumDetails th, #sumDetails td { white-space: normal; word-break: break-word; }
-/* Make all selects & buttons comfortably full-width */
+  /* Make all selects & buttons comfortably full-width */
   select, button { width: 100%; max-width: 100%; }
 
   /* Pathway selector never overflows the card */
@@ -152,15 +148,9 @@
 <section id="explorer" class="card hidden" aria-labelledby="explorerTitle" role="group">
   <h2 id="explorerTitle">Explorer Mode — Foundational Skills</h2>
   <p>Answer a short, cross‑pathway skills survey. We’ll suggest energy career pathways that fit you best.</p>
-  <div class="form-row" style="margin: 8px 0;">
-    <label for="explorerInterest" class="sr-only">I'm most interested in</label>
-    <select id="explorerInterest" aria-label="I'm most interested in">
-      <option value="">I’m open to anything — show best matches</option>
-    </select>
-  </div>
   <div id="explorerForm"></div>
   <div class="toolbar" style="padding-top: 10px;">
-    <button id="explorerCalc" class="primary">See My Top Matches</button>
+    <button id="explorerCalc" class="primary">Calculate Results</button>
     <button id="explorerCancel" class="secondary">Back</button>
   </div>
 </section>
@@ -235,11 +225,11 @@
       <p><strong>Recommendation:</strong> <span id="reco">–</span></p>
       <div id="upgrades" aria-label="Upgrade suggestions"></div>
 
-  <!-- NEW: Explorer Mode Top Matches -->
+  <!-- NEW: Explorer Mode Matches (text only) -->
   <div id="explorerMatches" style="margin-top:12px; display:none;">
-    <h3>Top Matches (Explorer Mode)</h3>
-    <p class="muted" style="margin-top:-6px">These are based on your foundational skills. To see Core/Established/Emerging results, choose a match and click Deep dive.</p>
-    <ol id="explorerList"></ol>
+    <h3>Suggested Pathways</h3>
+    <p class="muted" style="margin-top:-6px">Based on your foundational skills, these are top matches for you.</p>
+    <ol id="explorerList" style="padding-left: 1.2em;"></ol>
   </div>
 
 
@@ -661,88 +651,56 @@ function toggleOverviewButton(){
 })();
 
 
-/* ===== Explorer Mode (Foundational Skills) — v0.3 ===== */
-/* This section is additive and reuses the app's Likert builders and collectors. */
-
+/* ===== Explorer Mode (Foundational Skills) — v0.4 ===== */
 const FOUNDATION = {
-  // 23 items grouped into 8 categories (A–H)
+  // v0.3 survey: 23 items in 8 categories (A–H)
   questions: [
-    // A — Safety, Regulatory & Environmental Awareness
     { key:'A1', cat:'A', label:'I follow formal safety procedures (e.g., lockout/tagout, confined space, H2S/WHMIS where applicable).' },
     { key:'A2', cat:'A', label:'I can recognize hazards and follow emergency response procedures.' },
     { key:'A3', cat:'A', label:'I understand how regulations and compliance reporting affect day‑to‑day work.' },
     { key:'A4', cat:'A', label:'I have awareness of environmental legislation and sustainability/ESG expectations relevant to operations.' },
-
-    // B — Operations, Equipment & Troubleshooting
     { key:'B1', cat:'B', label:'I monitor equipment or processes and keep them within defined operating parameters.' },
     { key:'B2', cat:'B', label:'I use gauges/instruments/sensors and interpret readings to make adjustments.' },
     { key:'B3', cat:'B', label:'I perform basic maintenance, inspections, or preventative checks.' },
     { key:'B4', cat:'B', label:'I can troubleshoot issues and decide when to escalate to specialists.' },
-
-    // C — Data, Digital Tools & Reporting
     { key:'C1', cat:'C', label:'I gather and record operational or project data accurately (logs, checklists, forms).' },
     { key:'C2', cat:'C', label:'I analyze data to identify trends or issues (using spreadsheets or specialized tools).' },
     { key:'C3', cat:'C', label:'I prepare clear reports or summaries for supervisors/teams.' },
     { key:'C4', cat:'C', label:'I’m comfortable learning new software or digital tools used in technical roles.' },
-
-    // D — Problem Solving & Risk
     { key:'D1', cat:'D', label:'I evaluate performance, identify root causes, and propose solutions.' },
     { key:'D2', cat:'D', label:'I consider safety, environmental, and business risks when making recommendations.' },
-
-    // E — Teamwork & Communication
     { key:'E1', cat:'E', label:'I collaborate effectively with multi‑disciplinary teams (field, technical, office).' },
     { key:'E2', cat:'E', label:'I explain technical information clearly to non‑experts.' },
     { key:'E3', cat:'E', label:'I contribute to positive relationships with external stakeholders or community members when needed.' },
-
-    // F — Field Methods & Instrumentation
     { key:'F1', cat:'F', label:'I’m comfortable working in field settings and following site procedures.' },
     { key:'F2', cat:'F', label:'I use test equipment and measurement techniques correctly (calibration, QA/QC, documentation).' },
-
-    // G — Cultural Awareness (Indigenous & Community Contexts)
     { key:'G1', cat:'G', label:'I have awareness of Indigenous history, rights, and protocols relevant to project engagement.' },
     { key:'G2', cat:'G', label:'I show respect for local community perspectives and integrate them into plans when appropriate.' },
-
-    // H — Project/Process Awareness
     { key:'H1', cat:'H', label:'I understand how my tasks fit within broader operational processes and business objectives.' },
     { key:'H2', cat:'H', label:'I can plan work, prioritize tasks, and meet quality and schedule expectations.' },
   ],
   cats: ['A','B','C','D','E','F','G','H']
 };
 
-/* Category weights per pathway (1–3). These are heuristic defaults so Explorer
-   produces differentiated matches immediately. Adjust per client review. */
+/* Category weights per pathway (1–3) — defaults to create differentiated matches */
 let CROSSWALK_CAT = {};
-
 function buildDefaultCategoryWeights(){
   const pathNames = Object.keys(DATA);
   const defaults = {};
   pathNames.forEach(p => {
     const name = p.toLowerCase();
     let w = {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2}; // baseline
-
-    if (/geoscien/.test(name)){
-      w = {A:2,B:2,C:3,D:3,E:2,F:3,G:2,H:2};
-    } else if (/technolog/.test(name)){
-      w = {A:2,B:2,C:3,D:3,E:2,F:2,G:2,H:2};
-    } else if (/facility|process operator/.test(name)){
-      w = {A:3,B:3,C:2,D:2,E:2,F:2,G:2,H:2};
-    } else if (/inspection|testing/.test(name)){
-      w = {A:2,B:2,C:3,D:2,E:2,F:3,G:2,H:2};
-    } else if (/engineer/.test(name)){
-      w = {A:2,B:2,C:3,D:3,E:2,F:2,G:2,H:3};
-    } else if (/environment|health|safety/.test(name)){
-      w = {A:3,B:2,C:3,D:2,E:2,F:2,G:2,H:2};
-    } else if (/emission/.test(name)){
-      w = {A:2,B:2,C:3,D:2,E:2,F:3,G:2,H:2};
-    } else if (/sustain/.test(name)){
-      w = {A:2,B:2,C:3,D:3,E:2,F:1,G:2,H:2};
-    } else if (/external|relation|advisor/.test(name)){
-      w = {A:2,B:1,C:2,D:2,E:3,F:1,G:2,H:2};
-    } else if (/labour|operator/.test(name)){
-      w = {A:3,B:3,C:2,D:1,E:2,F:2,G:2,H:2};
-    } else if (/truck|driver/.test(name)){
-      w = {A:3,B:2,C:2,D:1,E:2,F:1,G:2,H:2};
-    }
+    if (/geoscien/.test(name))           w = {A:2,B:2,C:3,D:3,E:2,F:3,G:2,H:2};
+    else if (/technolog/.test(name))     w = {A:2,B:2,C:3,D:3,E:2,F:2,G:2,H:2};
+    else if (/facility|process operator/.test(name)) w = {A:3,B:3,C:2,D:2,E:2,F:2,G:2,H:2};
+    else if (/inspection|testing/.test(name)) w = {A:2,B:2,C:3,D:2,E:2,F:3,G:2,H:2};
+    else if (/engineer/.test(name))      w = {A:2,B:2,C:3,D:3,E:2,F:2,G:2,H:3};
+    else if (/environment|health|safety/.test(name)) w = {A:3,B:2,C:3,D:2,E:2,F:2,G:2,H:2};
+    else if (/emission/.test(name))      w = {A:2,B:2,C:3,D:2,E:2,F:3,G:2,H:2};
+    else if (/sustain/.test(name))       w = {A:2,B:2,C:3,D:3,E:2,F:1,G:2,H:2};
+    else if (/external|relation|advisor/.test(name)) w = {A:2,B:1,C:2,D:2,E:3,F:1,G:2,H:2};
+    else if (/labour|operator/.test(name)) w = {A:3,B:3,C:2,D:1,E:2,F:2,G:2,H:2};
+    else if (/truck|driver/.test(name))  w = {A:3,B:2,C:2,D:1,E:2,F:1,G:2,H:2};
     defaults[p] = w;
   });
   return defaults;
@@ -751,19 +709,6 @@ function buildDefaultCategoryWeights(){
 function renderExplorer(){
   ['#landing','#intro','#survey','#results','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
   qs('#explorer')?.classList.remove('hidden');
-
-  // Populate interest options by cloning the pathway list (once)
-  const sel = qs('#explorerInterest');
-  const baseSel = qs('#path');
-  if (sel && baseSel && sel.options.length <= 1){
-    [...baseSel.options].forEach(opt => {
-      const o = document.createElement('option');
-      o.value = opt.value; o.textContent = `Interested in: ${opt.textContent}`;
-      sel.appendChild(o);
-    });
-  }
-
-  // Build the 23-item Likert using existing builder
   const form = qs('#explorerForm');
   if (form){
     form.innerHTML = '';
@@ -773,62 +718,95 @@ function renderExplorer(){
 }
 
 function computeExplorerResults(){
-  const rows = collect('foundation'); // [{score, label, ...}] length 23
+  const rows = collect('foundation'); // length 23
   const scores = rows.map(r => r?.score || 0);
+  const nMax = scores.length * 5;
+  const total = scores.reduce((a,b)=>a+b,0);
+  const readiness = Math.round(100 * (nMax ? total/nMax : 0));
 
+  // Map to General Level (mirror original thresholds)
+  let level = 'Developing';
+  if (readiness >= 80) level = 'Highly Skilled';
+  else if (readiness >= 60) level = 'Competent';
+  qs('#level').textContent = level;
+
+  // Determine Primary Focus by cluster averages
+  const idxCat = FOUNDATION.questions.map(q=>q.cat);
+  function avgCats(catList){
+    let sum=0, count=0;
+    scores.forEach((s,i)=>{ if(catList.includes(idxCat[i])){ sum+=s; count++; } });
+    return count? (sum/(count*5)) : 0;
+  }
+  const clusters = [
+    { name:'Operations & Field', cats:['B','F','H'], score: avgCats(['B','F','H']) },
+    { name:'Data & Analysis', cats:['C','D'], score: avgCats(['C','D']) },
+    { name:'EHS / Regulatory', cats:['A','G'], score: avgCats(['A','G']) },
+    { name:'Stakeholder / Communication', cats:['E'], score: avgCats(['E']) },
+  ].sort((a,b)=>b.score-a.score);
+  qs('#focus').textContent = clusters[0]?.name || '—';
+
+  // Recommendation sentence based on top 2 clusters
+  const topCats = clusters.slice(0,2).map(c=>c.name).join(' + ');
+  let reco = `Strengths in ${topCats}. Consider pathways that rely on these strengths.`;
+  qs('#reco').textContent = reco;
+
+  // Build per-pathway matches
   if (!CROSSWALK_CAT || Object.keys(CROSSWALK_CAT).length === 0){
     CROSSWALK_CAT = buildDefaultCategoryWeights();
   }
-
-  // Prepare category index map
-  const catIdx = FOUNDATION.questions.map(q => q.cat);
-
-  const interest = qs('#explorerInterest')?.value || "";
-
   const fits = Object.keys(DATA).map(path => {
-    const weights = CROSSWALK_CAT[path] || {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2};
-    let num = 0, den = 0;
-    for (let i = 0; i < scores.length; i++){
-      const cat = catIdx[i];
-      const w = weights[cat] || 2;
-      const s = scores[i] || 0;
-      num += s * w;
-      den += 5 * w; // max per item * weight
+    const w = CROSSWALK_CAT[path] || {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2};
+    let num=0, den=0;
+    for (let i=0;i<scores.length;i++){
+      const cat = idxCat[i];
+      num += scores[i] * (w[cat]||2);
+      den += 5 * (w[cat]||2);
     }
-    let pct = Math.round(100 * (den ? (num/den) : 0));
-    if (interest && path === interest) pct = Math.min(100, Math.round(pct * 1.08)); // gentle interest bias
+    const pct = Math.round(100 * (den ? num/den : 0));
     return { path, pct };
-  }).sort((a,b)=> b.pct - a.pct).slice(0,3);
+  }).sort((a,b)=>b.pct-a.pct).slice(0,3);
 
-  // Render Top Matches
+  // Render text-only list (no deep dive)
   const list = qs('#explorerList');
   if (list){
-    list.innerHTML = "";
-    fits.forEach((f, idx)=>{
-      const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.className = 'secondary';
-      btn.textContent = `${idx+1}. Deep dive into ${f.path} (${f.pct}%)`;
-      btn.addEventListener('click', ()=>{
-        const sel = qs('#path');
-        if (sel){ sel.value = f.path; sel.dispatchEvent(new Event('change', {bubbles:true})); }
-        renderSurvey(f.path);
-        qs('#results')?.classList.add('hidden');
-        window.scrollTo({top:0, behavior:'smooth'});
-      });
-      li.appendChild(btn);
-      list.appendChild(li);
-    });
+    list.innerHTML = fits.map((f,i)=> `<li><strong>${f.path}</strong> — ${f.pct}% match</li>`).join('');
     qs('#explorerMatches').style.display = fits.length ? 'block' : 'none';
   }
 
-  // Show Results panel for consistent UX
-  ['#landing','#intro','#survey','#explorer','#summary'].forEach(id=>qs(id)?.classList.add('hidden'));
+  // Build Explorer responses table and hook the toggle
+  function responsesTable(){
+    const rowsHTML = rows.map((r,i)=>{
+      const q = FOUNDATION.questions[i]?.label || r.question || `Question ${i+1}`;
+      const label = r.label || '—';
+      return `<tr><td>${q}</td><td>${label}</td></tr>`;
+    }).join('');
+    return `<h4>Explorer — Foundational Skills</h4>
+            <table><thead><tr><th>Question</th><th>Your Response</th></tr></thead>
+            <tbody>${rowsHTML}</tbody></table>`;
+  }
+  const rr = qs('#resultsResponses');
+  if (rr){
+    rr.innerHTML = responsesTable();
+    // Toggle visibility
+    const chk = qs('#showResponses');
+    if (chk){
+      rr.classList.toggle('hidden', !chk.checked);
+      chk.onchange = ()=> rr.classList.toggle('hidden', !chk.checked);
+    }
+  }
+
+  // Show Results panel
+  ['#landing','#intro','#survey','#explorer','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
   qs('#results')?.classList.remove('hidden');
-  window.scrollTo({top: qs('#results')?.offsetTop || 0, behavior:'smooth'});
+  // Reset KPI boxes (Explorer doesn't calculate Core/Established/Emerging)
+  qs('#corePct').textContent = '—';
+  qs('#estPct').textContent = '—';
+  qs('#emgPct').textContent = '—';
+
+  window.scrollTo({ top: qs('#results')?.offsetTop || 0, behavior: 'smooth' });
 }
 
-// Wire events once DOM is ready
+// Wire Explorer actions & improve printing
 document.addEventListener('DOMContentLoaded', ()=>{
   qs('#explore')?.addEventListener('click', renderExplorer);
   qs('#explorerCalc')?.addEventListener('click', computeExplorerResults);
@@ -837,8 +815,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
     qs('#landing')?.classList.remove('hidden');
     window.scrollTo({top:0, behavior:'smooth'});
   });
+
+  // Ensure print includes responses if checkbox is checked
+  const printBtn = qs('#printBtn');
+  if (printBtn){
+    printBtn.addEventListener('click', ()=>{
+      const rr = qs('#resultsResponses');
+      const chk = qs('#showResponses');
+      if (rr && chk && chk.checked) rr.classList.remove('hidden');
+      window.print();
+    });
+  }
 });
-/* ===== End Explorer Mode — v0.3 ===== */
+/* ===== End Explorer Mode — v0.4 ===== */
 
 </script>
 </body>
