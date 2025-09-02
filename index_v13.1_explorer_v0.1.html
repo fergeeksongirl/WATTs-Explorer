@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEMO • WATTs v13.1</title>
+<link rel="icon" href="/mnt/data/favicon.jpeg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+  :root { --accent:#0ea5e9; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --brand:#E7C74D; --ink2:#1f2937; --ok:#16a34a; --done:#4ade80; }
+  body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; color: var(--ink); }
+  a.skip { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+  a.skip:focus { position:static; width:auto; height:auto; background:#fff4ce; border:1px solid #e0c46c; padding:6px 10px; display:inline-block; margin:8px; }
+  header.brand { background:#0f1845; color:white; }
+  header.brand .wrap { max-width:1140px; margin:0 auto; padding:8px 16px; display:flex; align-items:center; gap:14px; }
+  header.brand img { max-height:56px; width:auto; }
+  .container { max-width: 1140px; margin:0 auto; padding:16px; }
+  h1 { margin: 8px 0 6px; }
+  .notice { background:#fff4ce; border:1px solid #e0c46c; padding:10px 12px; border-radius:8px; max-width:980px; }
+  .support { background:#f5f5f5; border-left:6px solid #333; padding:12px 14px; border-radius:10px; max-width:980px; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
+  .likert { display:grid; grid-template-columns: 1fr 260px; gap:10px; align-items:center; margin: 6px 0; }
+  select, button { padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:16px; }
+  button.primary { background:var(--accent); color:white; border-color:var(--accent); }
+  button.secondary { background:white; color:var(--accent); border-color:var(--accent); }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; }
+  .kpis { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+  .kpis .box { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:12px; }
+  .pill { padding: 4px 8px; border:1px solid #cbd5e1; border-radius:999px; display:inline-block; margin:2px 6px 2px 0; }
+  .hidden { display:none; }
+  .step { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  /* Stepper */
+  .stepper { margin: 6px 0 14px; }
+  .stepper ol { list-style:none; display:flex; gap:8px; padding:0; margin:0; flex-wrap:wrap;}
+  .stepper li { display:flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted); }
+  .stepper li .num { width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#e2e8f0; font-size:12px; }
+  .stepper li.active { border-color: var(--accent); color: var(--ink); }
+  .stepper li.active .num { background: var(--accent); color:white; }
+  .stepper li.done { border-color: var(--done); color: var(--ink); }
+  .stepper li.done .num { background: var(--done); color:#064e3b; }
+  /* Modal */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(2,6,23,0.55); display:none; }
+  .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; }
+  .modal .dialog { background:white; max-width:900px; max-height:85vh; overflow:auto; border-radius:12px; border:1px solid var(--line); padding:18px; }
+  .modal .dialog header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:0; background:white; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+  table { width:100%; border-collapse: collapse; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align: top; }
+  th { background:#f8fafc; }
+  @media print {
+    header, .toolbar, .support, .notice, #landing, #intro + .card, #overviewBtn, .stepper { display:none !important; }
+  /* Results will remain visible for printing */
+  #summary { display:none !important; } /* ensure summary stays hidden per the new flow */
+    body { margin:0; }
+    .container { padding:0; }
+    .card { border:none; margin:0 0 10px 0; }
+  }
+	
+/* Hide the stepper entirely */
+.stepper { display: none !important; }
+
+/* Hide the inline Next buttons in Sections 1 & 2 */
+#sec1Wrap .toolbar,
+#sec2Wrap .toolbar { display: none !important; }
+	
+/* === v12.7 mobile refinements === */
+@media (max-width: 768px) {
+  
+  .likert label { white-space: normal; word-break: break-word; }
+  #resultsResponses, #sumDetails { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  #resultsResponses table, #sumDetails table { table-layout: fixed; width:100%; }
+  #resultsResponses th, #resultsResponses td, #sumDetails th, #sumDetails td { white-space: normal; word-break: break-word; }
+/* Make all selects & buttons comfortably full-width */
+  select, button { width: 100%; max-width: 100%; }
+
+  /* Pathway selector never overflows the card */
+  #path { width: 100%; min-width: 0; }
+
+  /* Likert rows become single column (label above control) */
+  .likert { grid-template-columns: 1fr; }
+
+  /* KPI tiles stack vertically */
+  .kpis { grid-template-columns: 1fr; }
+
+  /* Action bars stack nicely and wrap */
+  .toolbar { flex-direction: column; align-items: stretch; }
+}
+
+</style>
+</head>
+<body>
+<header class="brand">
+  <div class="wrap">
+    <div style="font-weight:700; font-size:20px;">WATTs • Workforce Assessment for Transition &amp; Talent</div>
+    <div class="sub">Build: 2025-08-31 19:45:00Z</div>
+  </div>
+</header>
+<div class="container">
+  <header>
+    <h1 id="pageTitle">WATTs • Interactive Skills Assessment</h1>
+  </header>
+<!-- Always-visible support box ABOVE landing -->
+<section id="supportBox" class="card support" aria-label="Support" style="background-color:#F5F5F5; border-left:6px solid #333; padding:1em;">
+	  <h2 style="margin:0 0 6px 0; font-size:18px;"><span style="color: #004080;"><i class="fa-solid fa-circle-question fa-xl"></i></span> We’re Here to Help</h2>
+	  <p style="margin:0 0 8px 0;">If you have any questions or run into issues while completing the <strong>WATTs Assessment</strong>, contact the <strong>Creative Links </strong>team for support.</p>
+		<div style="text-align:right; margin-bottom:0.8em;">
+			<a href="mailto:pks@creativelinks.ca?subject=Support%20Request%20-%20WATTs%20App"
+		 style="display:inline-block; background-color:#004080; color:#FFF; padding:0.6em 1.2em; text-decoration:none; font-weight:bold; border-radius:4px; margin-top:0.5em;">
+		 SUPPORT 🛟
+			</a>
+		</div>
+	</section>
+  <main id="main">
+    <section id="landing" class="card" aria-labelledby="landingTitle">
+      <div class="step">Career Pathways</div>
+      <h2 id="landingTitle">Welcome</h2>
+      <p>This <strong>Skills Assessment</strong> helps you reflect on your experience and identify opportunities to grow or transition within the energy sector.</p>
+      <p><strong>Purpose</strong>: <br>
+      Your responses are used to generate a personalized profile of your skills.&nbsp;</p>
+      <p><strong>Privacy</strong>: <br>
+      Results are for your use only and are not shared without your consent.&nbsp;</p>
+      <p><strong>What to Expect</strong>: <br>
+      You’ll answer questions about your knowledge and work experience. At the end, you can view, print, or save your results.</p>
+		<br>
+<hr>
+		<br>
+      <label for="path"><strong>Careers in Energy: </strong></label>
+      <select id="path" name="path" aria-describedby="landingHelp" autocomplete="off"></select>
+
+	  <p>Use the drop-down menu to select a career pathway.</p>
+	  <p>Once a career is selected:&nbsp;</p>
+<ul>
+	    <li><strong>Start Assessment</strong> begin the Skills Assessment.</li>
+	    <li><strong>Pathway Overview</strong> learn more about that career before starting.</li>
+</ul>
+		<p><strong>Note</strong>: You must select a career before either button is activated.</p>
+<br>
+<hr>
+	  <br>
+	
+<p id="landingHelp" class="sr-only">After selecting a pathway, choose either Start Assessment to begin the Skills Assessment -or Pathway Overview to read about that career before starting.</p>
+      <div class="toolbar" style="padding-top: 10px;">
+        <button id="start" class="primary" disabled>Start Assessment</button>
+        <button id="overviewBtn" class="secondary" aria-haspopup="dialog" aria-controls="modal" aria-expanded="false" disabled>Pathway Overview</button>
+  <button id="explore" class="secondary">Try Explorer Mode</button>
+      </div>
+    </section>
+
+    
+<!-- NEW: Explorer Mode (foundational skills) -->
+<section id="explorer" class="card hidden" aria-labelledby="explorerTitle" role="group">
+  <h2 id="explorerTitle">Explorer Mode — Foundational Skills</h2>
+  <p>Answer a few questions about your transferable skills. We’ll suggest energy career pathways that fit you best.</p>
+  <div id="explorerForm"></div>
+  <div class="toolbar" style="padding-top: 10px;">
+    <button id="explorerCalc" class="primary">See My Top Matches</button>
+    <button id="explorerCancel" class="secondary">Back</button>
+  </div>
+</section>
+
+<section id="workflow" class="stepper hidden" aria-label="Survey steps">
+      <ol>
+        <li id="st1" class="active"><span class="num">1</span><span>Intro</span></li>
+        <li id="st2"><span class="num">2</span><span>Section 1</span></li>
+        <li id="st3"><span class="num">3</span><span>Section 2</span></li>
+        <li id="st4"><span class="num">4</span><span>Section 3</span></li>
+        <li id="st5"><span class="num">5</span><span>Results</span></li>
+      </ol>
+    </section>
+
+    <section id="intro" class="card hidden" aria-labelledby="introTitle">
+      <h2 id="introTitle" class="sr-only">Skills Assessment Survey</h2>
+      <div class="toolbar" style="padding-top: 20px;">
+        <button id="toS1" class="primary">Continue</button>
+        <button id="resetToLanding" class="secondary">Explore Another Pathway</button>
+      </div>
+    </section>
+	  
+<!-- place this immediately AFTER the #intro section -->
+	<section id="supportBelow" class="card support hidden" aria-label="Support" style="background-color:#F5F5F5; border-left:6px solid #333; padding:1em;">
+	  <h2 style="margin:0 0 6px 0; font-size:18px;"><span style="color: #004080;"><i class="fa-solid fa-circle-question fa-xl"></i></span> We’re Here to Help</h2>
+	  <p style="margin:0 0 8px 0;">If you have any questions or run into issues while completing the <strong>WATTs Assessment</strong>, contact the <strong>Creative Links </strong>team for support.</p>
+		<div style="text-align:right; margin-bottom:0.8em;">
+			<a href="mailto:pks@creativelinks.ca?subject=Support%20Request%20-%20WATTs%20App"
+		 style="display:inline-block; background-color:#004080; color:#FFF; padding:0.6em 1.2em; text-decoration:none; font-weight:bold; border-radius:4px; margin-top:0.5em;">
+		 SUPPORT 🛟
+			</a>
+		</div>
+	</section>
+
+    <section id="survey" class="card hidden" aria-labelledby="surveyTitle" role="group">
+      <h2 id="surveyTitle">—</h2>
+
+      <section id="sec1Wrap" class="card" aria-labelledby="s1Title" role="group">
+        <h3 id="s1Title">Section 1 — Core / General</h3>
+        <div id="sec1"></div>
+        <div class="toolbar" style="padding-top: 20px;">
+          <button id="toS2" class="primary">Next: Section 2</button>
+        </div>
+      </section>
+
+      <section id="sec2Wrap" class="card hidden" aria-labelledby="s2Title" role="group">
+        <h3 id="s2Title">Section 2 — Established</h3>
+        <div id="sec2"></div>
+        <div class="toolbar" style="padding-top: 20px;">
+          <button id="toS3" class="primary">Next: Section 3</button>
+        </div>
+      </section>
+
+      <section id="sec3Wrap" class="card hidden" aria-labelledby="s3Title" role="group">
+        <h3 id="s3Title">Section 3 — Emerging</h3>
+        <div id="sec3"></div>
+        <div class="toolbar" style="padding-top: 20px;">
+          <button id="calc" class="primary">Calculate Results</button>          
+        </div>
+      </section>
+    </section>
+
+    <section id="results" class="card hidden" aria-live="polite" role="status" aria-label="Assessment results">
+      <h2>Results</h2>
+      <div class="kpis">
+        <div class="box"><strong>Core</strong> <div id="corePct">–</div></div>
+        <div class="box"><strong>Established</strong> <div id="estPct">–</div></div>
+        <div class="box"><strong>Emerging</strong> <div id="emgPct">–</div></div>
+      </div>
+      <p><strong>General Level:</strong> <span id="level">–</span></p>
+      <p><strong>Primary Focus:</strong> <span id="focus">–</span></p>
+      <p><strong>Recommendation:</strong> <span id="reco">–</span></p>
+      <div id="upgrades" aria-label="Upgrade suggestions"></div>
+
+  <!-- NEW: Explorer Mode Top Matches -->
+  <div id="explorerMatches" style="margin-top:12px; display:none;">
+    <h3>Top Matches (Explorer Mode)</h3>
+    <ol id="explorerList"></ol>
+  </div>
+
+
+	<!-- Optional responses toggle -->
+	<div class="toolbar" id="respToggleWrap">
+		<div>
+		<h2>Response Summary</h2>
+	  <label for="showResponses" style="display:flex; align-items:center; gap:.5rem; padding-top: 10px;">
+		<input type="checkbox" id="showResponses" />
+		  <span> View my responses with the results and include them when printing.</span>
+	  </label><br>
+			</div>
+		</div>
+
+<!-- Where the response tables will render -->
+<div id="resultsResponses" class="card hidden" aria-live="polite"></div>
+
+		
+	<div class="toolbar" id="resultsActions" style="padding-top: 10px;">
+		<button id="printBtn" class="secondary">Print / Save PDF</button>
+		<button id="exploreBtn" class="secondary">Explore Another Pathway</button>
+		</div>
+
+<!-- Connect Box (CTA) -->
+	<div style="background-color:#E8F4FA; border-left:6px solid #007ACC; padding:1em; margin:1.5em 0; color:#222;">
+  <h2 style="font-size:1.2em; margin-top:0;"><span style="color: #004080;"><i class="fa-solid fa-circle-info fa-xl"></i></span> Curious about your career pathway in the energy sector?</h2>
+		 <p>Your results are just the beginning. <strong>Creative Links</strong> can help you apply them to discover new career pathways in the energy sector.Together, we can review your results and turn them into next steps and future opportunities.</p>		
+  <div>
+    <a href="mailto:pks@creativelinks.ca?subject=I%E2%80%99m%20Ready%20for%20WATTs%20Next!" 
+       style="display:inline-block; background-color:#004080; color:#FFF; padding:0.6em 1.2em; text-decoration:none; font-weight:bold; border-radius:4px; margin-top:0.5em;"><span aria-label="What’s Next?">WATTs Next?</span>  
+    </a>
+  </div>
+		<p>Use the <strong>WATT’s Next?</strong> button to email us today.</p>
+		<p style="margin-top:0.8em; font-size:0.95em; color:#222;">
+			<span style="color: #004080;"><i class="fa-solid fa-globe fa-lg"></i></span> 
+			Visit us online at <a href="https://creativelinks.ca" style="color:#004080; text-decoration:underline;">CreativeLinks.ca</a>  
+			</p>
+		<p style="margin-top:0.8em; font-size:0.95em; color:#222;">	
+			<span style="color: #004080;"><i class="fa-solid fa-link fa-lg"></i></span> 
+			Find email + LinkedIn details on our <a href="https://creativelinks.ca/ContactUs/" style="color:#004080; text-decoration:underline;">Contact Page</a>
+		</p>
+		</div>
+	  </section>
+
+    <section id="summary" class="card hidden" aria-labelledby="summaryTitle">
+      <h2 id="summaryTitle">Summary — <span id="sumPath">—</span></h2>
+      <p id="sumTime"></p>
+      <p id="sumScores"></p>
+      <p><strong>General Level:</strong> <span id="sumLevel">—</span></p>
+      <p><strong>Primary Focus:</strong> <span id="sumFocus">—</span></p>
+      <p><strong>Recommendation:</strong> <span id="sumReco">—</span></p>
+      <div id="sumUpgrades" style="margin:6px 0 12px 0;"></div>
+
+      <h3>Your Responses</h3>
+      <div id="sumDetails"></div>
+	
+
+      <div class="toolbar">
+        <button id="resetBtn" class="secondary">Reset Answers</button>
+      </div>
+      <p style="margin-top:12px;color:#64748b;font-size:12px">Build: 2025-08-31 04:03:07Z</p>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="backdrop" aria-hidden="true"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="dialog">
+    <header>
+      <h2 id="modalTitle" style="margin:0;">Pathway Overview</h2>
+      <button id="closeModal" style="width:50px;">✖️</button>
+    </header>
+    <div id="modalBody" style="padding-top:10px"></div>
+  </div>
+</div>
+
+<script>
+const DATA = {"Geoscientist": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Apply math/chem/physics to solve geoscience problems", "Interpret geological maps/cross-sections; prepare plans/drawings/models", "Use statistical/digital tools & geoscience software; 3D seismic interpretation", "Collect, compile, and analyze field/lab data; write technical reports", "Knowledge of environmental legislation/regulations", "Understanding of Indigenous relations", "Analytical thinking; attention to detail; adaptability; collaboration", "Safety awareness for industrial operations (e.g., H2S Alive, basic survival)"], "established": ["Reservoir characterization (well logs, core); advise on drilling locations", "Compile & interpret seismic/geophysical data to support development plans", "Plan/execute exploration programs with multi-disciplinary teams", "Assess subsurface risk for reservoir/completions/mining projects", "Plan well decommissioning, remediation, and repurposing", "Conduct field testing and remote sensing; operate/interpret seismic tools", "Support environmental assessment & waste reduction/recycling solutions"], "emerging": ["Hydrogen properties/behaviour; evaluate cavern storage", "CO2 properties/handling; injection well design; storage site evaluation/monitoring (MRV)", "Plan H2/CO2 storage programs with long-term monitoring & safety systems", "Geophysical mapping for decommissioning/re-use & safe fluid disposal", "Remote sensing & satellite/aerial methods to contextualize subsurface opportunities"], "upgrades": ["P.Geo. licensure after 3\u20134 years supervised experience (plus exam where required)", "Seismic/reservoir modeling specialization", "H2S/heli-vessel safety; advanced hydrogen safety; CO2 hazards"]}, "Technologist": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Interpret drawings, P&IDs, and specifications", "Use CAD/drafting tools effectively", "Collect accurate field measurements & data", "Calibrate and maintain instruments", "Follow QA/QC procedures and documentation", "Apply safety procedures (LOTO, PPE, permits)", "Prepare concise technical reports", "Collaborate with engineers and operators"], "established": ["Production/processing support in oil & gas", "Pipeline integrity and inspection support", "Refinery/petrochemical QA/QC activities", "Oil sands tailings & water sampling programs", "Energy services field technician work", "Control systems support (DCS/PLC/SCADA)"], "emerging": ["Hydrogen instrumentation & safety interlocks", "CCS MRV support (monitoring, reporting, verification)", "LNG cryogenic measurements and sensors", "Biofuels/RNG laboratory testing & QA", "Geothermal measurement systems"], "upgrades": ["C.E.T. designation", "Vendor courses: DCS/PLC/SCADA/CAD", "Advanced sampling & QA credentials"]}, "Energy Services Labourers & Operators": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Use tools & equipment safely", "Read job tickets & follow procedures", "Operate/assist small machinery and lifts", "Apply site safety practices (PPE, spotter)", "Communicate with dispatch and crew leads", "Load, secure, and offload equipment", "Maintain housekeeping & site organization", "Complete logs and checklists accurately"], "established": ["Rig move, assembly, and disassembly", "Fluid hauling and vacuum services", "Hot shot and specialized freight", "Pipeline ROW preparation and restoration", "Plant turnaround and outage support", "Site cleanup and remediation assistance"], "emerging": ["Hydrogen project logistics support", "LNG facility materials handling", "Biofuels feedstock handling", "CCS site support (CO2 equipment)", "Emissions monitoring support activities"], "upgrades": ["Class 1/3 licence + air brakes", "H2S, First Aid, TDG, WHMIS", "Confined Space and Fall Protection"]}, "External Relations Advisor": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Stakeholder mapping and relationship management", "Write clear, audience\u2011appropriate communications", "Facilitate meetings and community engagements", "Analyze regulatory/permit requirements & timelines", "Plan and track issues / risks / commitments", "Cultural awareness incl. Indigenous relations protocols", "Media monitoring & brief preparation", "Use CRM or consultation tracking systems"], "established": ["Consultation planning for O&G, pipelines, facilities", "Landowner & municipal engagement programs", "Regulator submissions support (public interest, evidence)", "Emergency communications and incident updates", "Community investment / benefit programs", "Develop Q&A, fact sheets, and project summaries"], "emerging": ["Engagement on hydrogen hubs & fueling infrastructure", "Consultation for CCS injection/monitoring facilities", "Public education for LNG terminals & shipping", "Biofuels/RNG community feedstock partnerships", "Just transition narratives and workforce messaging"], "upgrades": ["IAP2 Foundations/Planning/Techniques", "Indigenous engagement training", "Media spokesperson training"]}, "Engineer \u2014 Process/Chemical": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Mass & energy balances; thermodynamics; reaction engineering", "PFD/P&ID development; equipment sizing", "Process simulation (e.g., Aspen/HYSYS)", "HAZOP/LOPA participation; MOC documentation", "Material selection & corrosion basics", "Technical report writing and economic screening", "Operations troubleshooting and optimization", "Contractor/vendor coordination"], "established": ["Oil & gas separation, treatment, and stabilization", "Refinery unit operations (distillation, cracking, hydrotreating)", "Pipeline hydraulics & facilities (compressors/pumps)", "Utilities and offsites (steam, water, flares)", "Turnarounds\u2014process scopes and commissioning"], "emerging": ["Hydrogen production (SMR + CCS, electrolysis) and safety", "CO2 capture processes (amine/physical solvents), compression & injection", "LNG liquefaction fundamentals and cryogenic hazards", "Biofuels/RNG upgrading and impurities management", "Power-to-X and carbon intensity/LCAs"], "upgrades": ["P.Eng. licensure; ethics exam", "Advanced HYSYS/Aspen courses", "Hydrogen/CCS safety credentials"]}, "Engineer \u2014 Mechanical": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Machine design; stress/strain, fatigue, and materials", "Pressure equipment codes (ASME, API) & welding basics", "Rotating equipment fundamentals (pumps, compressors)", "Reliability & maintenance planning (RCM)", "Vibration/laser alignment/condition monitoring basics", "3D modelling & drawings (CAD)", "Field inspections and NCR close\u2011out", "Project/construction support & QA"], "established": ["Static & rotating equipment selection/specs in O&G/refining", "Pipeline facilities mechanical packages (pumps, PSVs, coolers)", "Turnaround inspection scopes and repair plans", "Materials handling & lifting plans"], "emerging": ["Hydrogen embrittlement/material compatibility", "CO2 compression & dense phase piping", "LNG cryogenic rotating equipment", "Geothermal & bioenergy mechanical systems"], "upgrades": ["P.Eng.; API 510/570/653 awareness", "RCM & reliability certifications", "Rotating equipment vendor training"]}, "Engineer \u2014 Electrical/Instrumentation": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Power systems, MCCs, switchgear, protection basics", "Instrumentation principles (pressure, flow, temp, level)", "Control narratives, cause & effects, and alarm philosophy", "PLC/DCS/SCADA configuration fundamentals", "Hazardous area classification & grounding", "Drawing packages (single lines, loop diagrams)", "Startup/commissioning procedures", "Maintenance & calibration planning"], "established": ["Plant power distribution and motor control", "Custody transfer metering & analyzers", "Shutdown keys and interlock testing", "Cybersecurity basics for industrial control systems"], "emerging": ["Hydrogen detection, interlocks, and SIL considerations", "CCS monitoring systems (MRV) and telemetries", "LNG cryogenic instrumentation & ESD systems", "Grid interconnection for renewables and storage"], "upgrades": ["P.Eng./P.Tech.(Eng.) as applicable", "ISA/IEC functional safety training", "Vendor courses (PLC/DCS/SCADA)"]}, "Environment, Health & Safety Professional": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Regulatory frameworks & permitting", "Hazard identification & risk assessment", "Incident investigation and root cause analysis", "Emergency response planning and drills", "Safety training & toolbox facilitation", "Occupational hygiene basics", "Environmental monitoring & reporting", "Contractor management & audits"], "established": ["O&G construction & operations HSE programs", "Pipeline ROW & facility safety oversight", "Refinery/plant turnaround HSE coordination", "Waste management & spill response"], "emerging": ["CCS-specific risks (CO2 exposure; MRV plans)", "Hydrogen safety (detection, ventilation, area classification)", "LNG cryogenic hazards & HAZID participation", "ESG reporting and low-carbon compliance"], "upgrades": ["CRSP/CSP, CHSC, NCSO/CSO", "Incident Command System (ICS) levels", "TDG/WHMIS/First Aid/Confined Space/FO training"]}, "Emissions Measurement Professional": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Sampling theory; measurement uncertainty", "Calibration procedures and traceability", "Use of analyzers & data acquisition systems", "Fugitive emissions detection & quantification", "Understanding of emissions regulations & reporting", "QA/QC plans for field testing", "Data validation and analysis", "Technical documentation and client reporting"], "established": ["Stack testing & continuous emissions monitoring (CEMs)", "Combustion efficiency & flare performance", "Methane leak detection (OGI, Hi\u2011Flow, Method 21)", "Pneumatics & compressor vent measurement"], "emerging": ["Satellite/airborne methane quantification", "Carbon intensity lifecycle methods", "CCS MRV for injection & storage", "Hydrogen blending detection/measurement"], "upgrades": ["LDAR/OGI certifications", "ISOs (17025, 14064) awareness", "Advanced CEMs vendor training"]}, "Truck Driver": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Pre\u2011trip inspections and defect reporting", "Logbook/HOS compliance & route planning", "Load securement and weight distribution", "TDG and WHMIS awareness", "Defensive driving in all weather", "Communication with dispatch and customers", "Basic maintenance & troubleshooting", "Site safety and PPE compliance"], "established": ["Fluid hauling (vac, water, acid) and offloading", "Hot shot and specialized freight", "Oil sands mine/site haul roads operations", "Pipeline and plant deliveries & pickups"], "emerging": ["Hydrogen/LNG transport protocols and hazards", "Biofuels/RNG feedstock logistics", "Support for CCS operations (CO2 equipment hauling)"], "upgrades": ["Class 1/3 with air brakes; Oilfield Driver Awareness", "H2S Alive; First Aid; TDG; WHMIS", "Winter driving and off\u2011road courses"]}, "Facility & Process Operator": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Read P&IDs; understand process flow", "Startup/shutdown procedures and permits", "Sampling, lab tests, and field readings", "Rounding & logkeeping; shift handover", "Troubleshooting and abnormal response", "Lockout/Tagout and safe work practices", "Communication with control room and maintenance", "Basic maintenance tasks"], "established": ["Operate separators, treaters, and compressors", "Monitor heaters, exchangers, towers, and reactors", "Pigging and pipeline operations support", "Unit lineups and energy isolation for maintenance"], "emerging": ["Operate hydrogen systems and safety devices", "LNG process monitoring & cryogenic hazards", "CCS injection well & pipeline monitoring", "Biofuels fermentation/upgrading operations"], "upgrades": ["Power Engineering progression (4th\u21923rd\u21922nd)", "Vendor training on major equipment", "Gas Process Operations certificates"]}, "Sustainability Professional": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["ESG frameworks & materiality assessment", "Energy management and efficiency analysis", "GHG accounting (Scope 1\u20133)", "Lifecycle assessment (LCA) methods", "Stakeholder engagement and reporting", "Policy analysis and compliance tracking", "Change management & cross\u2011functional facilitation", "Data visualization and dashboarding"], "established": ["Corporate sustainability/ESG reporting", "Energy audits and conservation projects", "Waste reduction and circularity initiatives", "Water stewardship planning"], "emerging": ["Low\u2011carbon fuels standards & credits", "Carbon markets & offsets strategy", "Hydrogen/CCS project screening for decarbonization", "Nature\u2011based solutions & biodiversity metrics"], "upgrades": ["ISO 14064/GHG Protocol training", "Certified Energy Manager (CEM)", "GRI/ISSB reporting courses"]}, "Inspection & Testing Technician": {"weights": {"core": 2, "established": 3, "emerging": 4}, "core": ["Read drawings/specs and inspection test plans (ITPs)", "Use measurement tools and maintain calibration", "Write clear inspection reports with photos", "Apply QA/QC procedures and NCR handling", "Understand welding processes and NDE basics", "Safety permits and site procedures", "Communicate findings with supervisors/clients", "Use digital reporting tools"], "established": ["Perform NDE (MT/PT/UT/RT) under certification scope", "Pressure equipment inspection (vessels, piping)", "Coatings/linings inspections and holiday testing", "Electrical/Instrumentation loop checks and FAT/SAT support"], "emerging": ["Drone/robotic inspection methods", "Digital twins & laser scanning QA", "Hydrogen service inspection concerns", "CCS/LNG-specific inspection scopes"], "upgrades": ["CGSB/ASNT NDT certifications", "API/ABSA in-service inspection credentials", "Coatings certifications (NACE/AMPP)"]}};
+const INTRO_TMPL = "\n<h2>{name} • Skills Assessment</h2>\n<p><strong>Purpose</strong></p>\n<p>This survey helps you reflect on your skills and experience across three areas of the <strong>{name}</strong> pathway</p>\n<ul>\n  <li><strong>Core/General</strong>: {core}</li>\n  <li><strong>Established</strong>: {established}</li>\n  <li><strong>Emerging</strong>: {emerging}</li>\n</ul>\n<p>Your responses generate weighted scores that:</p>\n<ul>\n  <li>Show your <strong>general level</strong>: <em>Developing / Competent / Highly Skilled</em>.</li>\n  <li>Identify your <strong>primary focus</strong>: Established vs. Emerging skills.</li>\n  <li>Provide <strong>personalized upgrade and transition suggestions</strong> to guide your next steps.</li>\n</ul>\n<hr>\n<p id=\"scaleDesc\"><strong>How to Rate Your Experience</strong></p>\n<p>For each survey question, select the option that best matches your level of knowledge and performance. Use examples from your own work to support your choice.</p>\n<ul>\n  <li><strong>Novice </strong>\u2192 <em>Remember / Recognize</em> (you can recall or identify concepts with guidance).</li>\n  <li><strong>Basic</strong> \u2192 <em>Understand / Explain</em> (you can describe or explain in your own words).</li>\n  <li><strong>Working</strong> \u2192 <em>Apply / Execute</em> (you can use the skill in typical work situations).</li>\n  <li><strong>Advanced </strong>\u2192 <em>Analyze / Adapt</em> (you can examine, troubleshoot, and adjust to context).</li>\n  <li><strong>Expert</strong> \u2192 <em>Evaluate / Create</em> (you can assess quality, make judgments, and create new approaches or solutions).</li>\n</ul>\n<p><strong>Tip</strong></p>\n<p>Think of your selection as evidence-based self-assessment \u2014 where have you demonstrated this skill in real-world projects, and at what level?</p>\n";
+const INTRO = {"Geoscientist": {"core": "foundational geoscience (math/chem/physics, mapping & cross\u2011sections, digital & seismic tools, regulatory/Indigenous context, analytical & teamwork).", "established": "subsurface interpretation, reservoir characterization, exploration & development planning, risk assessment, decommissioning support.", "emerging": "hydrogen & CO\u2082 storage fundamentals, site screening, injection/MRV, remote sensing for transition projects."}, "Technologist": {"core": "drawings/P&IDs, CAD, measurement/data collection, calibration & QA/QC, safety procedures, collaboration and reporting.", "established": "O&G production/processing support, pipeline integrity, refinery QA/QC, oil sands sampling, control systems support.", "emerging": "hydrogen instrumentation & interlocks, CCS MRV support, LNG cryogenic sensors, biofuels/RNG QA, geothermal systems."}, "Energy Services Labourers & Operators": {"core": "safe equipment use, procedures, machinery/lifts, site safety, comms with dispatch, load securement, housekeeping, logs.", "established": "rig moves, fluid hauling, freight, pipeline ROW work, turnarounds/outages, cleanup/remediation support.", "emerging": "hydrogen/LNG logistics, biofuels feedstock handling, CCS site support, emissions monitoring support tasks."}, "External Relations Advisor": {"core": "stakeholder mapping, communications, facilitation, regulatory context, risk tracking, Indigenous relations, media monitoring, CRM tools.", "established": "consultation programs, engagement materials, regulator submissions, emergency comms, community investment.", "emerging": "hydrogen/CCS/LNG engagement, biofuels partnerships, just transition messaging."}, "Engineer \u2014 Process/Chemical": {"core": "balances/thermo, PFD/P&ID, simulation, safety studies, materials/corrosion, reporting/economics, troubleshooting, vendor coordination.", "established": "O&G separation/treatment, refining unit ops, pipeline facilities, utilities/offsites, turnarounds & commissioning.", "emerging": "H2 production & safety, CO\u2082 capture/compression/injection, LNG, biofuels/RNG, life\u2011cycle carbon intensity."}, "Engineer \u2014 Mechanical": {"core": "design & materials, codes, rotating equipment, reliability/maintenance, CAD, field inspections, construction QA.", "established": "equipment selection/specs, pump/compressor packages, turnaround repairs, lifting & handling plans.", "emerging": "H\u2082 embrittlement, CO\u2082 compression piping, LNG cryogenic machines, geothermal/bioenergy systems."}, "Engineer \u2014 Electrical/Instrumentation": {"core": "power systems, instrumentation, control narratives, PLC/DCS/SCADA, hazardous areas, drawings, commissioning, calibration.", "established": "plant distribution/MCCs, custody transfer/analyzers, interlock testing, ICS cybersecurity basics.", "emerging": "H\u2082 detection/SIL, CCS MRV telemetries, LNG cryogenic ESD, renewable interconnections."}, "Environment, Health & Safety Professional": {"core": "regulations, hazard/risk analyses, incident investigation, emergency response, training, occupational hygiene, env. monitoring, contractor audits.", "established": "HSE programs in O&G/pipelines/refineries, turnarounds, waste & spill management.", "emerging": "CCS & H\u2082 safety, LNG cryogenics, ESG & low\u2011carbon compliance."}, "Emissions Measurement Professional": {"core": "sampling & uncertainty, calibration & traceability, analyzers & data systems, fugitive detection, regulations, QA/QC, analysis & reporting.", "established": "stack testing/CEMs, flare performance, methane LDAR, pneumatic/compressor vent measurement.", "emerging": "satellite/airborne quantification, life\u2011cycle CI, CCS MRV, H\u2082 blending detection."}, "Truck Driver": {"core": "inspections, HOS/logs, securement, TDG/WHMIS, defensive driving, comms, basic troubleshooting, site safety.", "established": "fluid hauling, specialized freight, mine/site haul roads, pipeline/plant deliveries.", "emerging": "H\u2082/LNG transport hazards, biofuels logistics, CCS equipment support."}, "Facility & Process Operator": {"core": "P&IDs/flow, startup/shutdown, sampling & tests, rounds/logs, troubleshooting, LOTO, comms, basic maintenance.", "established": "operate production units & compressors, pipeline operations, lineups & isolations.", "emerging": "operate hydrogen/LNG/CCS/biofuels systems."}, "Sustainability Professional": {"core": "ESG/materiality, energy mgmt, GHG accounting, LCA, stakeholder reporting, policy, change mgmt, data viz.", "established": "corporate reporting, energy audits, waste/circularity, water stewardship.", "emerging": "LCFS/credits, carbon markets, H\u2082/CCS decarb screening, nature\u2011based solutions."}, "Inspection & Testing Technician": {"core": "drawings & ITPs, measurement tools, reporting, QA/QC & NCRs, welding/NDE basics, permits, communication, digital tools.", "established": "NDE, pressure equipment, coatings inspection, E&I loop checks & FAT/SAT.", "emerging": "drones/robotics, digital twins/laser scanning, H\u2082 service concerns, CCS/LNG scopes."}};
+const OVERVIEWS = {"Geoscientist": "<h2>Geoscientist \u2014 Pathway Overview</h2>\n  <h3>What Geoscientists Do</h3>\n  <ul>\n    <li>Plan & conduct geological/geochemical/geophysical studies; lab & computational analyses for exploration, site selection, waste management, remediation.</li>\n    <li>Assess mineral ore bodies & hydrocarbon reservoirs; advise on land acquisition, drilling, and opportunities (carbon storage, repurposing).</li>\n    <li>Acquire & interpret field/remote data (surveys, well logs/cores, seismic, aerial/satellite).</li>\n    <li>Identify natural risks (erosion, landslides, soil instability, earthquakes) to protect people & environment.</li>\n  </ul>\n  <h3>Key Skills & Abilities Geoscientists Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> materials composition; mineral/metal resources; advanced math/chem/physics; technical design & tools; statistical/digital analysis; environmental legislation; Indigenous relations.</li>\n    <li><strong>Technical skills:</strong> map-making; 3D seismic interpretation; gather information & write reports.</li>\n    <li><strong>Certifications:</strong> driver\u2019s licence; safety tickets as required. <strong>Attributes:</strong> analytical, detail\u2011oriented, adaptable, collaborative, independent.</li>\n  </ul>\n  <h3>Overview of Geoscience Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> internships/entry roles; supervised experience toward P.Geo. (~3\u20134 years + exam in some provinces).</li>\n    <li><strong>Intermediate:</strong> broader technical & personal skills (Geologist/Geophysicist/Geochemist/Environmental Geoscientist).</li>\n    <li><strong>Senior:</strong> P.Geo.; specializations (petroleum exploration & development, environmental, hydrogeology, near\u2011surface geophysics, seismology, surveying/mapping, consulting).</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <p>Building blocks transfer across Oil & Gas, Offshore, Oil Sands, Energy Services, Hydrogen, and CCS (limited in pipelines, LNG, refineries, biofuels).</p>\n  <ul>\n    <li>Subsurface mapping & reservoir characterization \u2192 O&G, Offshore, Oil Sands.</li>\n    <li>Geophysical mapping for decommissioning/repurposing \u2192 end\u2011of\u2011life assets, safe fluid disposal.</li>\n    <li>Hydrogen storage \u2192 properties/behaviour, storage screening, monitoring & safety.</li>\n    <li>CO\u2082 storage & MRV \u2192 properties/handling, injection wells, evaluation & long\u2011term monitoring.</li>\n    <li>Field testing & remote sensing \u2192 mapping/modeling across established & emerging sectors.</li>\n  </ul>\n  ", "Technologist": "<h2>Technologist \u2014 Pathway Overview</h2>\n  <h3>What Technologists Do</h3>\n  <ul>\n    <li>Interpret specifications; prepare/modify drawings; support design/build of equipment, systems, and processes.</li>\n    <li>Design & implement lab/field testing; compile/analyze data; prepare estimates and reports.</li>\n    <li>Install/operate/maintain equipment and control systems; troubleshoot and optimize KPIs.</li>\n    <li>Perform inspections & preventative maintenance; recommend improvements and upgrades.</li>\n  </ul>\n  <h3>Key Skills & Abilities Technologists Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> discipline foundations (instrumentation, electrical, petroleum, geology/geoscience, chemistry, mechanics); quality systems.</li>\n    <li><strong>Technical skills:</strong> CAD & drawing standards; data analysis; DCS/PLC/SCADA; survey methods; documentation & QA/QC.</li>\n    <li><strong>Certifications:</strong> C.E.T. designation (where applicable); vendor training (DCS/PLC/SCADA/CAD). <strong>Attributes:</strong> collaborative, detail\u2011oriented, adaptable, safety\u2011minded.</li>\n  </ul>\n  <h3>Overview of Technologist Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> technician/intern; supervised practice; field & lab support.</li>\n    <li><strong>Intermediate:</strong> technologist roles in O&G, Pipelines, Refining, Oil Sands; instrumentation, QA/QC, integrity, operations.</li>\n    <li><strong>Senior:</strong> lead technologist/supervisor; controls/automation specialist; project coordination; cross\u2011sector consulting.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <p>Building blocks transfer across O&G, Offshore, Oil Sands, Pipelines, Refining, plus Hydrogen, CCS, LNG, Biofuels, Geothermal.</p>\n  <ul>\n    <li>Design, documentation, testing/commissioning \u2192 O&G, Pipelines, Refining, LNG.</li>\n    <li>Field services & troubleshooting \u2192 Energy Services; turnarounds/outages.</li>\n    <li>Production optimization & measurement \u2192 O&G/Offshore/Oil Sands.</li>\n    <li>Hydrogen-specific instrumentation \u2192 electrolysis, compression/liquefaction/blending, storage, fuel cells.</li>\n    <li>CCS MRV instrumentation \u2192 monitoring, reporting, verification systems.</li>\n    <li>Biofuels/RNG QA & lab \u2192 sampling, analysis; Geothermal measurement systems.</li>\n  </ul>\n  ", "Energy Services Labourers & Operators": "<h2>Energy Services Labourers & Operators \u2014 Pathway Overview</h2>\n  <h3>What ES Labourers & Operators Do</h3>\n  <ul>\n    <li>Prepare/check/maintain tools, equipment, and vehicles for scheduled jobs.</li>\n    <li>Load, set up, take down, and clean up equipment and worksites; direct or assist crew tasks.</li>\n    <li>Update logs and records; drive to job locations; operate tools for seismic, drilling, completions, servicing, industrial worksites.</li>\n    <li>Participate in safety meetings; assist/oversee safe operations on site.</li>\n  </ul>\n  <h3>Key Skills & Abilities ES Labourers & Operators Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> industrial safety; working with materials/equipment/tools; preparing personal gear for outdoor/safety\u2011sensitive worksites.</li>\n    <li><strong>Technical skills:</strong> hand/power tools; mechanical equipment; equipment maintenance & inspections; operating specialized vehicles.</li>\n    <li><strong>Certifications:</strong> class\u2011appropriate driver\u2019s licence (with endorsements), Oilfield Driver Awareness, First Aid, H2S Alive, TDG, WHMIS, Fall Protection, Confined Space. <strong>Attributes:</strong> adaptable, collaborative, stress\u2011tolerant, active learner, attentive to detail.</li>\n  </ul>\n  <h3>Overview of ES Labourer/Operator Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> labourer/swamper; shop/yard support; basic field tasks.</li>\n    <li><strong>Intermediate:</strong> operator; specialty equipment (vacuum, fluid hauling, hot shot); pipeline ROW; plant outages.</li>\n    <li><strong>Senior:</strong> lead hand/foreman; crew coordination; training & mentoring; logistics planning.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <p>Building blocks transfer across O&G, Offshore, Oil Sands, Pipelines, Refining, and emerging sectors (Hydrogen, CCS, LNG, Biofuels).</p>\n  <ul>\n    <li>Tool/equipment selection & setup \u2192 all sectors.</li>\n    <li>Specialized vehicles & freight \u2192 O&G, Oil Sands, Pipelines, Refineries, LNG.</li>\n    <li>ROW, turnaround & outage support \u2192 Pipelines, Refineries, Oil Sands.</li>\n    <li>Hydrogen/LNG logistics; biofuels feedstock handling \u2192 emerging sectors.</li>\n    <li>CCS site support & emissions monitoring assistance \u2192 transition projects.</li>\n  </ul>\n  ", "External Relations Advisor": "<h2>External Relations Advisor \u2014 Pathway Overview</h2>\n  <h3>What External Relations Advisors Do</h3>\n  <ul>\n    <li>Plan and deliver stakeholder engagement and public consultation for projects and operations.</li>\n    <li>Coordinate communications, events, and materials; track issues, commitments, and feedback.</li>\n    <li>Support regulator filings and hearings with summaries, evidence, and responses.</li>\n    <li>Build constructive relationships with municipalities, landowners, Indigenous communities, and NGOs.</li>\n  </ul>\n  <h3>Key Skills & Abilities External Relations Advisors Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> regulatory frameworks, permitting timelines, consultation principles, Indigenous relations protocols.</li>\n    <li><strong>Technical skills:</strong> facilitation, plain\u2011language writing, issues/risk logs, CRM tools, media/social listening.</li>\n    <li><strong>Certifications:</strong> IAP2 training recommended; incident communications. <strong>Attributes:</strong> collaborative, culturally aware, organized, resilient.</li>\n  </ul>\n  <h3>Overview of External Relations Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> coordinator/assistant; logistics, note\u2011taking, materials preparation.</li>\n    <li><strong>Intermediate:</strong> advisor; lead consultations for projects; manage vendors and metrics.</li>\n    <li><strong>Senior:</strong> lead/senior advisor or manager; strategy, regulatory interfaces, crisis communications.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Consultation & permitting \u2192 O&G, Pipelines, Facilities, Refineries.</li>\n    <li>Education & engagement \u2192 Hydrogen hubs, CCS sites, LNG terminals.</li>\n    <li>Community partnerships \u2192 Biofuels/RNG feedstock programs; just transition initiatives.</li>\n  </ul>\n  ", "Engineer \u2014 Process/Chemical": "<h2>Engineer \u2014 Process/Chemical \u2014 Pathway Overview</h2>\n  <h3>What Process/Chemical Engineers Do</h3>\n  <ul>\n    <li>Develop PFDs/P&IDs, run simulations, size equipment, and prepare process datasheets.</li>\n    <li>Support HAZOP/LOPA, relief/flare design, and process safety documentation.</li>\n    <li>Commission, troubleshoot, and optimize operating facilities.</li>\n  </ul>\n  <h3>Key Skills & Abilities Process/Chemical Engineers Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> balances, thermo, reactions, separation processes, materials & corrosion, process controls.</li>\n    <li><strong>Technical skills:</strong> simulation (HYSYS/Aspen), hydraulic calculations, flare/relief, MOC/turnarounds.</li>\n    <li><strong>Certifications:</strong> P.Eng. licensure; safety tickets. <strong>Attributes:</strong> analytical, systems thinker, collaborative, safety\u2011minded.</li>\n  </ul>\n  <h3>Overview of Process/Chemical Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> EIT/Junior Engineer; data analysis, drawings, calculations.</li>\n    <li><strong>Intermediate:</strong> unit/process owner; project/process design; operations liaison.</li>\n    <li><strong>Senior:</strong> lead/SME; process safety and technology development.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Separation & treatment \u2192 O&G, Refineries.</li>\n    <li>Hydraulics & facilities \u2192 Pipelines, Gas plants.</li>\n    <li>Hydrogen/CCS/LNG/biofuels \u2192 low\u2011carbon projects and retrofits.</li>\n  </ul>\n  ", "Engineer \u2014 Mechanical": "<h2>Engineer \u2014 Mechanical \u2014 Pathway Overview</h2>\n  <h3>What Mechanical Engineers Do</h3>\n  <ul>\n    <li>Specify and design rotating/static equipment and packages.</li>\n    <li>Lead inspections, repairs, and reliability improvements.</li>\n    <li>Support construction, lifting plans, and commissioning.</li>\n  </ul>\n  <h3>Key Skills & Abilities Mechanical Engineers Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> strength of materials, fatigue, fracture, metallurgy, welding, and codes.</li>\n    <li><strong>Technical skills:</strong> pumps/compressors, heat exchangers, PSV sizing, vibration, CAD.</li>\n    <li><strong>Certifications:</strong> P.Eng.; API awareness. <strong>Attributes:</strong> practical, detail\u2011focused, safety\u2011first, team\u2011oriented.</li>\n  </ul>\n  <h3>Overview of Mechanical Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> EIT; package support, drawings, vendor coordination.</li>\n    <li><strong>Intermediate:</strong> equipment owner; reliability/maintenance planning; turnaround scopes.</li>\n    <li><strong>Senior:</strong> lead/SME; fitness\u2011for\u2011service; asset integrity leadership.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Pumps/compressors/coolers \u2192 O&G, Pipelines, LNG.</li>\n    <li>Pressure equipment codes \u2192 Refineries, CCS compression.</li>\n    <li>Cryogenics & materials \u2192 LNG, Hydrogen.</li>\n  </ul>\n  ", "Engineer \u2014 Electrical/Instrumentation": "<h2>Engineer \u2014 Electrical/Instrumentation \u2014 Pathway Overview</h2>\n  <h3>What Electrical/Instrumentation Engineers Do</h3>\n  <ul>\n    <li>Design power distribution, motor control, and protection systems.</li>\n    <li>Specify instrumentation, analyzers, and control strategies.</li>\n    <li>Commission and troubleshoot control systems and networks.</li>\n  </ul>\n  <h3>Key Skills & Abilities E/I Engineers Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> power systems, instrument principles, safety systems, hazardous areas.</li>\n    <li><strong>Technical skills:</strong> PLC/DCS/SCADA, C&E matrices, loop drawings, SIL verification.</li>\n    <li><strong>Certifications:</strong> P.Eng./P.Tech.(Eng.); functional safety. <strong>Attributes:</strong> methodical, communicative, safety\u2011minded.</li>\n  </ul>\n  <h3>Overview of E/I Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> EIT; drawings, configs, testing support.</li>\n    <li><strong>Intermediate:</strong> area engineer; projects and operations support.</li>\n    <li><strong>Senior:</strong> lead/SME; control system architecture and reliability.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Power/controls \u2192 O&G, Pipelines, Refineries.</li>\n    <li>Hydrogen detection/interlocks \u2192 Hydrogen facilities.</li>\n    <li>MRV systems \u2192 CCS; cryogenic ESD \u2192 LNG.</li>\n  </ul>\n  ", "Environment, Health & Safety Professional": "<h2>Environment, Health & Safety Professional \u2014 Pathway Overview</h2>\n  <h3>What EHS Professionals Do</h3>\n  <ul>\n    <li>Develop and implement safety/environmental programs, training, and monitoring.</li>\n    <li>Lead hazard identification, incident investigation, and corrective actions.</li>\n    <li>Coordinate emergency response and regulatory reporting.</li>\n  </ul>\n  <h3>Key Skills & Abilities EHS Professionals Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> OHS & environmental law, hazard controls, emergency response, occupational hygiene.</li>\n    <li><strong>Technical skills:</strong> audits/inspections, incident analysis, monitoring, contractor management.</li>\n    <li><strong>Certifications:</strong> CRSP/CSP/CHSC; ICS, TDG/WHMIS. <strong>Attributes:</strong> facilitative, detail\u2011oriented, calm under pressure.</li>\n  </ul>\n  <h3>Overview of EHS Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> coordinator; field presence & data collection.</li>\n    <li><strong>Intermediate:</strong> advisor; program ownership and coaching.</li>\n    <li><strong>Senior:</strong> manager/lead; strategy and regulatory engagement.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Construction/operations safety \u2192 O&G, Pipelines, Refineries, Oil Sands.</li>\n    <li>Hydrogen & LNG hazard programs \u2192 emerging sectors.</li>\n    <li>CCS MRV and emergency planning \u2192 sequestration projects.</li>\n  </ul>\n  ", "Emissions Measurement Professional": "<h2>Emissions Measurement Professional \u2014 Pathway Overview</h2>\n  <h3>What Emissions Measurement Professionals Do</h3>\n  <ul>\n    <li>Plan and execute field/lab programs to measure emissions and verify reductions.</li>\n    <li>Calibrate instruments, manage QA/QC, and validate/analyze data.</li>\n    <li>Prepare reports that meet regulatory and customer requirements.</li>\n  </ul>\n  <h3>Key Skills & Abilities</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> sampling, uncertainty, regulations, QA/QC, data methods.</li>\n    <li><strong>Technical skills:</strong> analyzers, CEMs, OGI/LDAR, data systems.</li>\n    <li><strong>Certifications:</strong> LDAR/OGI, safety tickets. <strong>Attributes:</strong> meticulous, field\u2011ready, analytical.</li>\n  </ul>\n  <h3>Overview of Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> technician; instrument setup & sampling.</li>\n    <li><strong>Intermediate:</strong> field lead; method development and client liaison.</li>\n    <li><strong>Senior:</strong> program manager/SME; verification and innovation leadership.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>LDAR and CEMs \u2192 O&G, Refineries, Pipelines.</li>\n    <li>MRV \u2192 CCS; H\u2082 blending detection \u2192 hydrogen projects.</li>\n    <li>Remote sensing \u2192 offshore, oil sands, and regional monitoring.</li>\n  </ul>\n  ", "Truck Driver": "<h2>Truck Driver \u2014 Pathway Overview</h2>\n  <h3>What Truck Drivers Do</h3>\n  <ul>\n    <li>Safely transport fluids, equipment, and materials to worksites and facilities.</li>\n    <li>Complete inspections, secure loads, and follow site procedures.</li>\n    <li>Communicate with dispatch and customers; maintain logs and records.</li>\n  </ul>\n  <h3>Key Skills & Abilities Truck Drivers Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> HOS, TDG/WHMIS, vehicle systems, defensive driving, route planning.</li>\n    <li><strong>Technical skills:</strong> load securement, off\u2011road driving, winter operations, product transfers.</li>\n    <li><strong>Certifications:</strong> Class 1/3 + air brakes; ODA; H2S; First Aid. <strong>Attributes:</strong> dependable, safety\u2011focused, customer\u2011oriented.</li>\n  </ul>\n  <h3>Overview of Trucking Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> swamper/helper; local deliveries.</li>\n    <li><strong>Intermediate:</strong> vac/fluid hauling; hot shot; mine/site roads.</li>\n    <li><strong>Senior:</strong> lead driver/trainer; specialized loads & logistics.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Specialized freight & fluids \u2192 O&G, Pipelines, Refineries, Oil Sands.</li>\n    <li>H\u2082/LNG protocols \u2192 emerging sectors.</li>\n    <li>CCS equipment and materials \u2192 sequestration projects.</li>\n  </ul>\n  ", "Facility & Process Operator": "<h2>Facility & Process Operator \u2014 Pathway Overview</h2>\n  <h3>What Facility & Process Operators Do</h3>\n  <ul>\n    <li>Operate and monitor process units, utilities, and offsites safely and efficiently.</li>\n    <li>Collect samples, perform field checks, and complete rounds and logs.</li>\n    <li>Respond to upsets, coordinate permits, and support maintenance.</li>\n  </ul>\n  <h3>Key Skills & Abilities Operators Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> process flow, instrumentation basics, procedures, safe work/LOTO.</li>\n    <li><strong>Technical skills:</strong> startups/shutdowns, isolations, pigging, compressor & treating operations.</li>\n    <li><strong>Certifications:</strong> Power Engineering (as applicable). <strong>Attributes:</strong> situational awareness, teamwork, problem solving.</li>\n  </ul>\n  <h3>Overview of Operator Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> trainee/field operator.</li>\n    <li><strong>Intermediate:</strong> board/area operator; mentor others; own procedures.</li>\n    <li><strong>Senior:</strong> lead/shift supervisor; commissioning & major outages.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>Gas processing & pipelines \u2192 O&G, LNG.</li>\n    <li>Utilities/offsites \u2192 Refineries, Hydrogen facilities.</li>\n    <li>Injection/monitoring \u2192 CCS; fermentation/upgrading \u2192 Biofuels.</li>\n  </ul>\n  ", "Sustainability Professional": "<h2>Sustainability Professional \u2014 Pathway Overview</h2>\n  <h3>What Sustainability Professionals Do</h3>\n  <ul>\n    <li>Lead ESG strategy, data collection, and reporting.</li>\n    <li>Drive energy efficiency and low\u2011carbon project portfolios.</li>\n    <li>Engage stakeholders and align programs to policy and standards.</li>\n  </ul>\n  <h3>Key Skills & Abilities Sustainability Professionals Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> GHG accounting, LCA, energy management, reporting frameworks.</li>\n    <li><strong>Technical skills:</strong> analytics/dashboards, project evaluation, assurance readiness.</li>\n    <li><strong>Certifications:</strong> CEM, ISO 14064/GHG Protocol, reporting frameworks. <strong>Attributes:</strong> systems thinking, facilitation, communication.</li>\n  </ul>\n  <h3>Overview of Sustainability Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> analyst/coordinator; data & projects.</li>\n    <li><strong>Intermediate:</strong> advisor/manager; program leadership.</li>\n    <li><strong>Senior:</strong> head/director; enterprise strategy & disclosure.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>ESG reporting & energy efficiency \u2192 all sectors.</li>\n    <li>Low\u2011carbon fuels and credits \u2192 Refining, Biofuels, RNG.</li>\n    <li>Decarbonization screening \u2192 Hydrogen and CCS projects.</li>\n  </ul>\n  ", "Inspection & Testing Technician": "<h2>Inspection & Testing Technician \u2014 Pathway Overview</h2>\n  <h3>What Inspection & Testing Technicians Do</h3>\n  <ul>\n    <li>Execute inspections and tests per codes/standards and ITPs.</li>\n    <li>Document results, manage NCRs, and coordinate repairs.</li>\n    <li>Support construction turnover, pre\u2011commissioning, and safety.</li>\n  </ul>\n  <h3>Key Skills & Abilities Technicians Need</h3>\n  <ul>\n    <li><strong>Core knowledge:</strong> codes/standards, welding/NDE basics, measurement tools, QA/QC.</li>\n    <li><strong>Technical skills:</strong> NDE methods, pressure tests, coatings inspection, loop checks.</li>\n    <li><strong>Certifications:</strong> CGSB/ASNT, API/ABSA, NACE/AMPP. <strong>Attributes:</strong> attentive, organized, safety\u2011minded.</li>\n  </ul>\n  <h3>Overview of Inspection & Testing Careers in Energy</h3>\n  <ul>\n    <li><strong>Entry/Junior:</strong> assistant/trainee; basic inspections.</li>\n    <li><strong>Intermediate:</strong> certified technician; area ownership.</li>\n    <li><strong>Senior:</strong> inspector/specialist; QA lead; SME.</li>\n  </ul>\n  <h3>Transferring Skills Between Sectors</h3>\n  <ul>\n    <li>NDE & pressure equipment \u2192 O&G, Pipelines, Refineries.</li>\n    <li>Cryogenic/LNG & Hydrogen inspections \u2192 emerging sectors.</li>\n    <li>Digital methods (drones/laser) \u2192 offshore, large facilities, CCS.</li>\n  </ul>\n  "};
+
+const SCALE = ["Novice","Basic","Working","Advanced","Expert"];
+const LABEL_TO_SCORE = {"Novice":1,"Basic":2,"Working":3,"Advanced":4,"Expert":5};
+
+function qs(s){return document.querySelector(s);}
+function qsa(s){return Array.from(document.querySelectorAll(s));}
+
+function setStep(n){
+  const ids=['st1','st2','st3','st4','st5'];
+  ids.forEach((id,idx)=>{
+    const el = qs('#'+id);
+    el.classList.remove('active','done');
+    if(idx < n-1) el.classList.add('done');
+    else if(idx === n-1) el.classList.add('active');
+  });
+}
+
+// Replace your existing setIntro() with this:
+function setIntro(name){
+  const i = INTRO[name];
+  const html = INTRO_TMPL
+    .replaceAll("{name}", name)
+    .replaceAll("{core}", i.core)
+    .replaceAll("{established}", i.established)
+    .replaceAll("{emerging}", i.emerging);
+
+
+  // NOTE: give the toolbar a stable id so we can hide it later - Button=Continue to Section 1
+  qs('#intro').innerHTML = html + `
+    <div id="introButtons" class="toolbar">
+      <button id="toS1" class="primary">Continue</button>
+      <button id="resetToLanding" class="secondary">Explore Another Pathway</button>
+    </div>`;
+
+
+
+  // Wire the buttons after injecting the HTML
+  qs('#toS1').addEventListener('click', ()=>{
+    // 1) Hide the two intro buttons immediately
+    const tb = qs('#introButtons');
+    if (tb) {
+      tb.classList.add('hidden');          // hides the button bar
+      tb.setAttribute('aria-hidden','true'); // a11y hint
+    }
+
+	// Reveal the survey and all sections at once
+	qs('#survey').classList.remove('hidden');
+	['#sec1Wrap', '#sec2Wrap', '#sec3Wrap'].forEach(id => qs(id).classList.remove('hidden'));
+
+	// (optional) bring the survey into view for the user
+	const heading = qs('#surveyTitle');
+	if (heading?.scrollIntoView) heading.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    setStep(2);
+
+    // 3) Move focus to the Section 1 heading (good for screen readers)
+    const s1 = qs('#s1Title');
+    if (s1) s1.focus ? s1.focus() : window.scrollTo({ top: qs('#sec1Wrap').offsetTop - 20, behavior: 'smooth' });
+  });
+
+  qs('#resetToLanding').addEventListener('click', exploreAnother);
+}
+
+function buildLikert(container, sectionKey, items){
+  container.innerHTML = "";
+  items.forEach((q,i)=>{
+    const row = document.createElement('div'); row.className='likert';
+    const id = sectionKey + "-" + i;
+    const lab = document.createElement('label'); lab.textContent = q; lab.setAttribute('for', id);
+    const sel = document.createElement('select'); 
+    sel.id = id; sel.setAttribute('data-section', sectionKey); sel.setAttribute('data-index', i); sel.setAttribute('data-question', q);
+    sel.setAttribute('aria-label', q + " — choose your level");
+    const placeholder = document.createElement('option'); placeholder.value=""; placeholder.textContent="—"; sel.appendChild(placeholder);
+    SCALE.forEach(label=>{ const opt=document.createElement('option'); opt.value=label; opt.textContent=label; sel.appendChild(opt); });
+    row.appendChild(lab); row.appendChild(sel);
+    container.appendChild(row);
+  });
+}
+
+
+/* Removed weighting details from surveyTitle */
+	/* code snippet replaced: qs('#surveyTitle').textContent = name + " — Skills Assessment (Core×"+d.weights.core+", Established×"+d.weights.established+", Emerging×"+d.weights.emerging+")";... */
+function renderSurvey(name){
+  const d = DATA[name];
+  qs('#surveyTitle').textContent = name + " • Skills Assessment";
+  buildLikert(qs('#sec1'), 'core', d.core);
+  buildLikert(qs('#sec2'), 'established', d.established);
+  buildLikert(qs('#sec3'), 'emerging', d.emerging);
+
+qs('#landing').classList.add('hidden');
+qs('#intro').classList.remove('hidden');
+
+qs('#survey').classList.add('hidden');    // keep hidden until user clicks Continue
+qs('#results').classList.add('hidden');
+qs('#summary').classList.add('hidden');
+
+/* Keep all sections hidden until the user clicks “Continue” (to Section 1) */
+['#sec1Wrap', '#sec2Wrap', '#sec3Wrap'].forEach(id => qs(id).classList.add('hidden'));
+
+
+/* We removed the stepper, so no setStep() here */
+
+  setStep(1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function collect(prefix){
+  return qsa(`[data-section="${prefix}"]`).map(sel=>{ 
+    const label = sel.value || ""; 
+    const score = LABEL_TO_SCORE[label] || 0; 
+    return { section: prefix, index: parseInt(sel.getAttribute('data-index')||"0",10), question: sel.getAttribute('data-question')||"", label, score }; 
+  });
+}
+function calcPct(vals, weight){ const sum = vals.reduce((a,b)=>a+b.score,0)*weight; const max = vals.length*5*weight; return Math.round(max? (sum/max*100):0); }
+
+function computeResults(){
+  const name = qs('#path').value;
+  const d = DATA[name];
+  const core = collect('core'), est = collect('established'), emg = collect('emerging');
+  const corePct = calcPct(core, d.weights.core);
+  const estPct  = calcPct(est, d.weights.established);
+  const emgPct  = calcPct(emg, d.weights.emerging);
+
+  qs('#corePct').textContent = corePct + "%";
+  qs('#estPct').textContent = estPct + "%";
+  qs('#emgPct').textContent = emgPct + "%";
+
+  let level = 'Developing'; if(corePct>=80) level='Highly Skilled'; else if(corePct>=60) level='Competent';
+  qs('#level').textContent = level;
+
+  let focus = (estPct>emgPct) ? 'Established' : 'Emerging';
+  qs('#focus').textContent = focus;
+
+  const RULES = {
+    primaryEstablished: "Strong fit for established sector roles.",
+    balancedEstToEmg: "Established base with emerging exposure — ideal for transition projects.",
+    primaryEmerging: "High alignment to emerging sectors (H2/LNG/CCS/biofuels).",
+    balancedEmgToEst: "Emerging focus with good base — pursue hybrid roles bridging old/new.",
+    broad: "Broad applicability across both sectors.",
+    foundational: "Strengthen core skills first and add targeted micro-credentials."
+  };
+
+  let reco='';
+  if(estPct>emgPct && (estPct>=80 || emgPct<60)) reco = RULES.primaryEstablished;
+  else if(estPct>emgPct && emgPct>=60) reco = RULES.balancedEstToEmg;
+  else if(emgPct>estPct && (emgPct>=80 || estPct<60)) reco = RULES.primaryEmerging;
+  else if(emgPct>estPct && estPct>=60) reco = RULES.balancedEmgToEst;
+  else if(estPct>=60 && emgPct>=60) reco = RULES.broad;
+  else reco = RULES.foundational;
+  qs('#reco').textContent = reco;
+
+  qs('#upgrades').innerHTML = (d.upgrades||[]).map(u=>`<span class="pill">${u}</span>`).join(' ');
+
+  const ts = new Date().toISOString();
+  qs('#sumPath').textContent = name;
+  qs('#sumTime').textContent = "Timestamp: " + ts;
+  qs('#sumScores').textContent = `Section scores: Core ${corePct}%, Established ${estPct}%, Emerging ${emgPct}%`;
+  qs('#sumLevel').textContent = level;
+  qs('#sumFocus').textContent = focus;
+  qs('#sumReco').textContent = reco;
+  qs('#sumUpgrades').innerHTML = (d.upgrades||[]).map(u=>`<span class="pill">${u}</span>`).join(' ');
+
+  // Build response tables
+  function sectionTable(title, list){
+    if(!list.length) return "";
+    const rows = list.map(o=>`<tr><td>${o.question}</td><td>${o.label || "—"}</td></tr>`).join("");
+    return `<h4>${title}</h4><table><thead><tr><th>Question</th><th>Your Response</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  qs('#sumDetails').innerHTML = sectionTable('Section 1 — Core / General', core)
+    + sectionTable('Section 2 — Established', est)
+    + sectionTable('Section 3 — Emerging', emg);
+	// Also build response tables into Results (hidden until toggled on)
+	const respHTML = sectionTable('Section 1 — Core / General', core)
+	  + sectionTable('Section 2 — Established', est)
+	  + sectionTable('Section 3 — Emerging', emg);
+	qs('#resultsResponses').innerHTML = respHTML;
+
+
+// Hide everything except Results
+qs('#intro').classList.add('hidden');
+qs('#survey').classList.add('hidden');
+qs('#workflow').classList.add('hidden');
+qs('#summary').classList.add('hidden');
+qs('#sec3Wrap').classList.add('hidden');
+
+  // NEW: also hide both support callouts for a clean results view
+  qs('#supportBox')?.classList.add('hidden');
+  qs('#supportBelow')?.classList.add('hidden');
+  qs('#introButtons')?.classList.add('hidden');
+
+	
+qs('#results').classList.remove('hidden');
+
+// Optional: scroll to Results
+window.scrollTo({ top: qs('#results').offsetTop - 16, behavior: 'smooth' });
+
+// We’re not showing the stepper on results per spec, so no setStep(5)
+return {name, ts};
+
+}
+
+// Modal & a11y
+let lastFocus = null;
+function openModal(html){
+  lastFocus = document.activeElement;
+  qs('#modalBody').innerHTML = html;
+  qs('#backdrop').style.display = 'block';
+  qs('#modal').style.display = 'flex';
+  qs('#overviewBtn').setAttribute('aria-expanded','true');
+  const focusables = Array.from(document.querySelectorAll('#modal button, #modal [href], #modal input, #modal select, #modal textarea, #modal [tabindex]:not([tabindex="-1"])'));
+  if(focusables.length) focusables[0].focus();
+}
+function closeModal(){
+  qs('#modalBody').innerHTML = '';
+  qs('#backdrop').style.display = 'none';
+  qs('#modal').style.display = 'none';
+  qs('#overviewBtn').setAttribute('aria-expanded','false');
+  if(lastFocus) lastFocus.focus();
+}
+	
+// Toggle show/hide of responses under Results (and include in print)
+const respCb = document.getElementById('showResponses');
+if (respCb) {
+  respCb.addEventListener('change', (e)=>{
+    qs('#resultsResponses').classList.toggle('hidden', !e.target.checked);
+  });
+}
+
+	
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id==='closeModal') closeModal();
+});
+document.getElementById('backdrop').addEventListener('click', closeModal);
+
+document.getElementById('start').addEventListener('click', ()=>{
+  const name = document.getElementById('path').value;
+  if(!name){ alert('Please select a pathway to begin.'); return; }
+  setIntro(name);
+  renderSurvey(name);
+  toggleOverviewButton();
+
+  // NEW: swap support location
+  qs('#supportBox')?.classList.add('hidden');     // hide the one above landing
+  qs('#supportBelow')?.classList.remove('hidden'); // show the one below Intro
+});
+
+document.getElementById('overviewBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('path').value;
+  if(!name) return;
+  if(OVERVIEWS[name]) openModal(OVERVIEWS[name]);
+});
+
+document.getElementById('toS2').addEventListener('click', ()=>{ qs('#sec1Wrap').classList.add('hidden'); qs('#sec2Wrap').classList.remove('hidden'); setStep(3); window.scrollTo({top:qs('#sec2Wrap').offsetTop-20,behavior:'smooth'}); });
+document.getElementById('toS3').addEventListener('click', ()=>{ qs('#sec2Wrap').classList.add('hidden'); qs('#sec3Wrap').classList.remove('hidden'); setStep(4); window.scrollTo({top:qs('#sec3Wrap').offsetTop-20,behavior:'smooth'}); });
+document.getElementById('calc').addEventListener('click', computeResults);
+document.getElementById('printBtn')?.addEventListener('click', ()=> window.print());
+
+function exploreAnother(){
+  Array.from(document.querySelectorAll('#survey select')).forEach(sel=> sel.value = "");
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('summary').classList.add('hidden');
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('survey').classList.add('hidden');
+  document.getElementById('workflow').classList.add('hidden');
+  document.getElementById('landing').classList.remove('hidden');
+
+  // NEW: restore support placement
+  qs('#supportBelow')?.classList.add('hidden');
+  qs('#supportBox')?.classList.remove('hidden');
+
+  // --- reset pathway selector to placeholder ---
+  const sel = document.getElementById('path');
+  if (sel) {
+    sel.selectedIndex = 0;           // back to placeholder
+    sel.value = "";                  // empty value
+    sel.dispatchEvent(new Event('change', { bubbles: true })); // update UI state
+  }
+  // ---------------------------------------------
+
+  closeModal();
+  document.getElementById('path').focus();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('exploreBtn').addEventListener('click', exploreAnother);
+
+function resetAnswers(){
+  Array.from(document.querySelectorAll('#survey select')).forEach(sel=> sel.value = "");
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('summary').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+  document.getElementById('survey').classList.remove('hidden');
+  document.getElementById('workflow').classList.remove('hidden');
+  document.getElementById('sec1Wrap').classList.add('hidden');
+  document.getElementById('sec2Wrap').classList.add('hidden');
+  document.getElementById('sec3Wrap').classList.add('hidden');
+  setStep(1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('resetBtn').addEventListener('click', resetAnswers);
+const ra = document.getElementById('resetAnswers');
+if (ra) ra.addEventListener('click', resetAnswers);
+
+// Enable/disable Start + Overview based on selection
+function toggleOverviewButton(){
+  const name = document.getElementById('path').value;
+  const start = document.getElementById('start');
+  const overview = document.getElementById('overviewBtn');
+  const has = !!name;
+  start.disabled = !has;
+  overview.disabled = !has || !OVERVIEWS[name];
+}
+
+// Init: add placeholder and populate A→Z
+(function init(){
+  const pathSel = document.getElementById('path');
+
+  // Clear existing options (safety)
+  while (pathSel.firstChild) pathSel.removeChild(pathSel.firstChild);
+
+  // Placeholder (default)
+  const placeholder = document.createElement('option');
+  placeholder.value = "";
+  placeholder.textContent = "select a career pathway";
+  placeholder.selected = true;
+  placeholder.disabled = true;
+  pathSel.appendChild(placeholder);
+
+  // Add pathways (alphabetical)
+  Object.keys(DATA).sort((a,b)=>a.localeCompare(b)).forEach(k=>{
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = k;
+    pathSel.appendChild(o);
+  });
+
+  pathSel.addEventListener('change', toggleOverviewButton);
+  toggleOverviewButton();
+})();
+
+
+/* ===== Explorer Mode (Foundational Skills) ===== */
+const FOUNDATION = {
+  blocks: [
+    { key:'data_literacy',    label:'Gather, analyze & report operational data' },
+    { key:'safety_awareness', label:'Safety practices & risk awareness' },
+    { key:'mech_aptitude',    label:'Install/maintain equipment; troubleshooting' },
+    { key:'ops_knowledge',    label:'Operations/production/maintenance processes' },
+    { key:'env_reg',          label:'Environmental regulations & compliance' },
+    { key:'teamwork',         label:'Collaborate with multi-disciplinary teams' },
+    { key:'field_methods',    label:'Field testing / instrumentation / remote sensing' },
+    { key:'problem_solving',  label:'Analytical thinking; diagnose & optimize' }
+  ]
+};
+
+// Optional: provide pathway-specific weights here; we also set neutral defaults at runtime.
+let CROSSWALK = {};
+
+function renderExplorer(){
+  // Hide other panels, show explorer
+  ['#landing','#intro','#survey','#results','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
+  qs('#explorer')?.classList.remove('hidden');
+  const form = qs('#explorerForm');
+  if (form) buildLikert(form, 'foundation', FOUNDATION.blocks.map(b=>b.label));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function computeExplorerResults(){
+  const rows = collect('foundation'); // [{section,index,question,label,score}]
+  // Build lookup by key (same order as blocks)
+  const scoreByKey = {}; 
+  FOUNDATION.blocks.forEach((b,i)=>{ scoreByKey[b.key] = rows[i]?.score || 0; });
+
+  // Fill neutral defaults if weights missing
+  if (!CROSSWALK || Object.keys(CROSSWALK).length === 0){
+    CROSSWALK = {};
+    Object.keys(DATA).forEach(p=>{
+      const w = {};
+      FOUNDATION.blocks.forEach(b=> w[b.key] = 2); // neutral weight
+      CROSSWALK[p] = w;
+    });
+  }
+
+  // Compute fit per pathway
+  const fits = Object.keys(DATA).map(path => {
+    const weights = CROSSWALK[path] || {};
+    let num = 0, den = 0;
+    FOUNDATION.blocks.forEach(b=>{
+      const w = (weights[b.key] != null) ? weights[b.key] : 2;
+      num += (scoreByKey[b.key]||0) * w;
+      den += 5 * w; // max score per block * weight
+    });
+    const pct = Math.round(100 * (den ? (num/den) : 0));
+    return { path, pct };
+  }).sort((a,b)=> b.pct - a.pct).slice(0,3);
+
+  // Render Top Matches in Results
+  const list = qs('#explorerList');
+  if (list){
+    list.innerHTML = "";
+    fits.forEach(f=>{
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'secondary';
+      btn.textContent = `Deep dive into ${f.path} (${f.pct}%)`;
+      btn.addEventListener('click', ()=>{
+        const sel = qs('#path');
+        if (sel){ sel.value = f.path; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+        renderSurvey(f.path);
+        qs('#results')?.classList.add('hidden');
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+    qs('#explorerMatches').style.display = fits.length ? 'block' : 'none';
+  }
+
+  // Show Results panel for consistent UX
+  ['#landing','#intro','#survey','#explorer','#summary'].forEach(id=>qs(id)?.classList.add('hidden'));
+  qs('#results')?.classList.remove('hidden');
+  window.scrollTo({top: qs('#results')?.offsetTop || 0, behavior:'smooth'});
+}
+
+// Wire events after DOM ready (runs in existing IIFE)
+document.addEventListener('DOMContentLoaded', ()=>{
+  qs('#explore')?.addEventListener('click', renderExplorer);
+  qs('#explorerCalc')?.addEventListener('click', computeExplorerResults);
+  qs('#explorerCancel')?.addEventListener('click', ()=>{
+    qs('#explorer')?.classList.add('hidden');
+    qs('#landing')?.classList.remove('hidden');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+/* ===== End Explorer Mode ===== */
+
+</script>
+</body>
+</html>
