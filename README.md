@@ -9,8 +9,7 @@ This repository contains the **stable v13.1 build** and the **Explorer Mode** ad
 
 ## Contents
 
-- `index_v13.1.html` — stable, production demo (single HTML file)
-- `index_v13.1_explorer_v0.1.html` — **Explorer Mode** demo (additive: keeps original UX/UI)
+- `index.html` — **Explorer Mode** demo (additive: keeps original UX/UI)
 - `docs/` — design notes and guides mirrored from the client file set (spec, design, changelog, doc guide)
 - `legal/` — license files (code + assets), security, support and contributing docs
 
@@ -21,6 +20,7 @@ This repository contains the **stable v13.1 build** and the **Explorer Mode** ad
 ## What is WATTs?
 
 WATTs helps users self‑assess their skills via **Core / Established / Emerging** sections and produces a concise recommendation (General Level, Primary Focus, Upgrades).  
+
 The **Explorer Mode** adds a short, **foundational skills** survey to guide **non‑energy** users toward **Top 3 pathway matches**, with a one‑click “Deep Dive” into the full pathway assessment.
 
 ### Key Features
@@ -35,10 +35,9 @@ The **Explorer Mode** adds a short, **foundational skills** survey to guide **no
 
 ## Quick Start
 
-1. Download this repository (or the two HTML files only).
+1. Download this repository (or the HTML files only).
 2. Open one of the HTML files directly in your browser:
-   - **Stable**: `index_v13.1.html`
-   - **Explorer demo**: `index_v13.1_explorer_v0.1.html`
+   - **Explorer demo**: `index.html`
 3. Use the pathway selector to run the standard assessment, or press **“Try Explorer Mode”** to test the add‑on.
 4. Print or save as PDF from your browser’s print dialog.
 
@@ -59,16 +58,10 @@ The **Explorer Mode** adds a short, **foundational skills** survey to guide **no
 
 ```
 /
-├─ index_v13.1.html
-├─ index_v13.1_explorer_v0.1.html
-├─ docs/
-│  ├─ WATTs_Prompts_and_Spec.md
-│  ├─ WATTs_Design_Document.md
-│  ├─ WATTs_Doc_Guide.md
-│  └─ WATTs_Changelog.md
+├─ index.html
 └─ legal/
-   ├─ LICENSE               (Code license: MIT)
-   ├─ ASSETS_LICENSE.md     (Non‑code assets policy)
+   ├─ LICENSE   (Code license: MIT)
+   ├─ ASSETS_LICENSE.md    (Non‑code assets policy)
    ├─ CONTRIBUTING.md
    ├─ SECURITY.md
    ├─ SUPPORT.md
