@@ -738,75 +738,89 @@ function renderExplorer(){
 function labelFor(p){ return p>=85?'Excellent match': p>=70?'Strong match': p>=55?'Moderate match':'Developing match'; }
 
 function computeExplorerResults(){
-  const rows = collect('foundation');
+  const rows = collect('foundation');          // Explorer survey only
   const answered = rows.filter(r => (r.score||0) > 0).length;
 
-  // If nothing answered, do not produce results
+  // 1) Same NO-ANSWERS rule as you liked
   if (!answered){
     alert('Please answer at least one question to see suggested pathways and recommendations.');
     return; // stay on Explorer screen
   }
 
+  // 2) Readiness & Level
   const scores = rows.map(r => r?.score || 0);
   const nMax = scores.length * 5;
   const total = scores.reduce((a,b)=>a+b,0);
   const readiness = Math.round(100 * (nMax ? total/nMax : 0));
-
-  // General Level
   let level = 'Developing';
   if (readiness >= 80) level = 'Highly Skilled';
   else if (readiness >= 60) level = 'Competent';
   qs('#level').textContent = level;
 
-  // Primary Focus via clusters
+  // 3) Clusters → Primary Focus + Recommendation (unchanged)
   const idxCat = FOUNDATION.questions.map(q=>q.cat);
-  function avgCats(list){ let sum=0,c=0; scores.forEach((s,i)=>{ if(list.includes(idxCat[i])){ sum+=s; c++; }}); return c? (sum/(c*5)) : 0; }
+  const avgCats = list => {
+    let sum=0,c=0; scores.forEach((s,i)=>{ if(list.includes(idxCat[i])){ sum+=s; c++; }});
+    return c? (sum/(c*5)) : 0;
+  };
   const clusters = [
     { name:'Operations & Field', cats:['B','F','H'], score: avgCats(['B','F','H']) },
-    { name:'Data & Analysis', cats:['C','D'], score: avgCats(['C','D']) },
-    { name:'EHS / Regulatory', cats:['A','G'], score: avgCats(['A','G']) },
+    { name:'Data & Analysis',    cats:['C','D'],     score: avgCats(['C','D']) },
+    { name:'EHS / Regulatory',   cats:['A','G'],     score: avgCats(['A','G']) },
     { name:'Stakeholder / Communication', cats:['E'], score: avgCats(['E']) },
   ].sort((a,b)=>b.score-a.score);
   qs('#focus').textContent = clusters[0]?.name || '—';
-
-  // Recommendation
   const topCats = clusters.slice(0,2).map(c=>c.name).join(' + ');
   qs('#reco').textContent = `Strengths in ${topCats}. Consider pathways that rely on these strengths.`;
 
-  // Suggested Pathways
-  if (!CROSSWALK_CAT || Object.keys(CROSSWALK_CAT).length === 0) CROSSWALK_CAT = buildDefaultCategoryWeights();
-  const list = qs('#explorerList'), block = qs('#explorerMatches');
+  // 4) Suggested Pathways (text-only) — same as before
+  if (!window.CROSSWALK_CAT || Object.keys(CROSSWALK_CAT).length === 0) CROSSWALK_CAT = buildDefaultCategoryWeights();
   const fits = Object.keys(DATA).map(path => {
     const w = CROSSWALK_CAT[path] || {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2};
     let num=0, den=0;
     for (let i=0;i<scores.length;i++){ const cat = idxCat[i]; num += scores[i]* (w[cat]||2); den += 5*(w[cat]||2); }
     return { path, pct: Math.round(100 * (den? num/den : 0)) };
   }).sort((a,b)=>b.pct-a.pct).slice(0,3);
+  const labelFor = p => p>=85?'Excellent match': p>=70?'Strong match': p>=55?'Moderate match':'Developing match';
+  const list = qs('#explorerList');
   if (list){
     list.innerHTML = fits.map(f=>`<li><strong>${f.path}</strong> — ${labelFor(f.pct)} (${f.pct}%)</li>`).join('');
+    const block = qs('#explorerMatches');
     if (block) block.style.display = fits.length ? 'block' : 'none';
   }
 
-  // Build responses table and hook checkbox
+  // 5) NEW — Category scores (Explorer)
+  const byCat = {}; FOUNDATION.cats.forEach(c=>byCat[c]={sum:0,count:0});
+  scores.forEach((s,i)=>{ const c=idxCat[i]; byCat[c].sum+=s; byCat[c].count++; });
+  const rowsHtml = FOUNDATION.cats.map(c=>{
+    const pct = byCat[c].count? Math.round(100 * (byCat[c].sum/(byCat[c].count*5))) : 0;
+    const label = (
+      c==='A'?'Safety / Regulatory / Environmental':
+      c==='B'?'Operations / Equipment / Troubleshooting':
+      c==='C'?'Data / Digital Tools / Reporting':
+      c==='D'?'Problem Solving / Risk':
+      c==='E'?'Teamwork / Communication':
+      c==='F'?'Field Methods / Instrumentation':
+      c==='G'?'Cultural Awareness (Indigenous & Community)':
+      'Project / Process Awareness'
+    );
+    return `<tr><td>${label}</td><td style="text-align:right;">${pct}%</td></tr>`;
+  }).join('');
+  const catRows = qs('#explorerCatRows'); if (catRows) catRows.innerHTML = rowsHtml;
+
+  // 6) Responses table + toggle (unchanged)
   const rr = qs('#resultsResponses');
-  function responsesTable(){
-    const rowsHTML = rows.map((r,i)=>{
-      const q = FOUNDATION.questions[i]?.label || r.question || `Question ${i+1}`;
-      const label = r.label || '—'; return `<tr><td>${q}</td><td>${label}</td></tr>`;
-    }).join('');
-    return `<h4>Explorer — Foundational Skills</h4><table><thead><tr><th>Question</th><th>Your Response</th></tr></thead><tbody>${rowsHTML}</tbody></table>`;
-  }
   if (rr){
-    rr.innerHTML = responsesTable();
+    const rowsTable = rows.map((r,i)=>`<tr><td>${FOUNDATION.questions[i].label}</td><td>${r.label||'—'}</td></tr>`).join('');
+    rr.innerHTML = `<h4>Explorer — Foundational Skills</h4><table><thead><tr><th>Question</th><th>Your Response</th></tr></thead><tbody>${rowsTable}</tbody></table>`;
     const chk = qs('#showResponses');
     if (chk){ rr.classList.toggle('hidden', !chk.checked); chk.onchange = ()=> rr.classList.toggle('hidden', !chk.checked); }
   }
 
-  // Show Results
+  // 7) Show Results + hide KPI tiles for Explorer; show category table
   ['#landing','#intro','#survey','#explorer','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
   qs('#results')?.classList.remove('hidden');
-  // Explorer does not compute section KPIs
-  qs('#corePct').textContent = '—'; qs('#estPct').textContent = '—'; qs('#emgPct').textContent = '—';
+  setExplorerModeKPI(true);                      // <<< hide Core/Established/Emerging tiles
   window.scrollTo({ top: qs('#results')?.offsetTop || 0, behavior: 'smooth' });
 }
 
