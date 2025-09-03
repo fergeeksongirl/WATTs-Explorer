@@ -443,6 +443,13 @@ function collect(prefix){
 function calcPct(vals, weight){ const sum = vals.reduce((a,b)=>a+b.score,0)*weight; const max = vals.length*5*weight; return Math.round(max? (sum/max*100):0); }
 
 function computeResults(){
+	// --- NO-ANSWERS guard (mirror Explorer behavior) ---
+if (![...qsa('#survey select')].some(s => s.value && s.value.trim() !== '')) {
+  alert('Please answer at least one question to calculate results.');
+  return; // stay on the pathway survey
+}
+// Make sure the standard KPI tiles are visible for pathway results
+setExplorerModeKPI(false);
   const name = qs('#path').value;
   const d = DATA[name];
   const core = collect('core'), est = collect('established'), emg = collect('emerging');
@@ -812,6 +819,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 /* ===== End Explorer Mode — v0.6 ===== */
 
+
+/* Helper: show/hide KPI tiles when Explorer is active */
+function setExplorerModeKPI(isExplorer){
+  const kpis = qs('.kpis');                 // the 3 tiles Core/Established/Emerging
+  const cats = qs('#explorerCats');         // the new Explorer category block
+  if (kpis) kpis.style.display = isExplorer ? 'none' : '';
+  if (cats) cats.style.display = isExplorer ? 'block' : 'none';
+}
 </script>
 </body>
 </html>
