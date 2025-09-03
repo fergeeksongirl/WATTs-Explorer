@@ -651,9 +651,8 @@ function toggleOverviewButton(){
 })();
 
 
-/* ===== Explorer Mode (Foundational Skills) — v0.4 ===== */
+/* ===== Explorer Mode (Foundational Skills) — v0.6 ===== */
 const FOUNDATION = {
-  // v0.3 survey: 23 items in 8 categories (A–H)
   questions: [
     { key:'A1', cat:'A', label:'I follow formal safety procedures (e.g., lockout/tagout, confined space, H2S/WHMIS where applicable).' },
     { key:'A2', cat:'A', label:'I can recognize hazards and follow emergency response procedures.' },
@@ -682,14 +681,13 @@ const FOUNDATION = {
   cats: ['A','B','C','D','E','F','G','H']
 };
 
-/* Category weights per pathway (1–3) — defaults to create differentiated matches */
 let CROSSWALK_CAT = {};
 function buildDefaultCategoryWeights(){
   const pathNames = Object.keys(DATA);
   const defaults = {};
   pathNames.forEach(p => {
     const name = p.toLowerCase();
-    let w = {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2}; // baseline
+    let w = {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2};
     if (/geoscien/.test(name))           w = {A:2,B:2,C:3,D:3,E:2,F:3,G:2,H:2};
     else if (/technolog/.test(name))     w = {A:2,B:2,C:3,D:3,E:2,F:2,G:2,H:2};
     else if (/facility|process operator/.test(name)) w = {A:3,B:3,C:2,D:2,E:2,F:2,G:2,H:2};
@@ -710,33 +708,36 @@ function renderExplorer(){
   ['#landing','#intro','#survey','#results','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
   qs('#explorer')?.classList.remove('hidden');
   const form = qs('#explorerForm');
-  if (form){
-    form.innerHTML = '';
-    buildLikert(form, 'foundation', FOUNDATION.questions.map(q=>q.label));
-  }
+  if (form){ form.innerHTML = ''; buildLikert(form, 'foundation', FOUNDATION.questions.map(q=>q.label)); }
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
+function labelFor(p){ return p>=85?'Excellent match': p>=70?'Strong match': p>=55?'Moderate match':'Developing match'; }
+
 function computeExplorerResults(){
-  const rows = collect('foundation'); // length 23
+  const rows = collect('foundation');
+  const answered = rows.filter(r => (r.score||0) > 0).length;
+
+  // If nothing answered, do not produce results
+  if (!answered){
+    alert('Please answer at least one question to see suggested pathways and recommendations.');
+    return; // stay on Explorer screen
+  }
+
   const scores = rows.map(r => r?.score || 0);
   const nMax = scores.length * 5;
   const total = scores.reduce((a,b)=>a+b,0);
   const readiness = Math.round(100 * (nMax ? total/nMax : 0));
 
-  // Map to General Level (mirror original thresholds)
+  // General Level
   let level = 'Developing';
   if (readiness >= 80) level = 'Highly Skilled';
   else if (readiness >= 60) level = 'Competent';
   qs('#level').textContent = level;
 
-  // Determine Primary Focus by cluster averages
+  // Primary Focus via clusters
   const idxCat = FOUNDATION.questions.map(q=>q.cat);
-  function avgCats(catList){
-    let sum=0, count=0;
-    scores.forEach((s,i)=>{ if(catList.includes(idxCat[i])){ sum+=s; count++; } });
-    return count? (sum/(count*5)) : 0;
-  }
+  function avgCats(list){ let sum=0,c=0; scores.forEach((s,i)=>{ if(list.includes(idxCat[i])){ sum+=s; c++; }}); return c? (sum/(c*5)) : 0; }
   const clusters = [
     { name:'Operations & Field', cats:['B','F','H'], score: avgCats(['B','F','H']) },
     { name:'Data & Analysis', cats:['C','D'], score: avgCats(['C','D']) },
@@ -745,89 +746,55 @@ function computeExplorerResults(){
   ].sort((a,b)=>b.score-a.score);
   qs('#focus').textContent = clusters[0]?.name || '—';
 
-  // Recommendation sentence based on top 2 clusters
+  // Recommendation
   const topCats = clusters.slice(0,2).map(c=>c.name).join(' + ');
-  let reco = `Strengths in ${topCats}. Consider pathways that rely on these strengths.`;
-  qs('#reco').textContent = reco;
+  qs('#reco').textContent = `Strengths in ${topCats}. Consider pathways that rely on these strengths.`;
 
-  // Build per-pathway matches
-  if (!CROSSWALK_CAT || Object.keys(CROSSWALK_CAT).length === 0){
-    CROSSWALK_CAT = buildDefaultCategoryWeights();
-  }
+  // Suggested Pathways
+  if (!CROSSWALK_CAT || Object.keys(CROSSWALK_CAT).length === 0) CROSSWALK_CAT = buildDefaultCategoryWeights();
+  const list = qs('#explorerList'), block = qs('#explorerMatches');
   const fits = Object.keys(DATA).map(path => {
     const w = CROSSWALK_CAT[path] || {A:2,B:2,C:2,D:2,E:2,F:2,G:2,H:2};
     let num=0, den=0;
-    for (let i=0;i<scores.length;i++){
-      const cat = idxCat[i];
-      num += scores[i] * (w[cat]||2);
-      den += 5 * (w[cat]||2);
-    }
-    const pct = Math.round(100 * (den ? num/den : 0));
-    return { path, pct };
+    for (let i=0;i<scores.length;i++){ const cat = idxCat[i]; num += scores[i]* (w[cat]||2); den += 5*(w[cat]||2); }
+    return { path, pct: Math.round(100 * (den? num/den : 0)) };
   }).sort((a,b)=>b.pct-a.pct).slice(0,3);
-
-  // Render text-only list (no deep dive)
-  const list = qs('#explorerList');
   if (list){
-    list.innerHTML = fits.map((f,i)=> `<li><strong>${f.path}</strong> — ${f.pct}% match</li>`).join('');
-    qs('#explorerMatches').style.display = fits.length ? 'block' : 'none';
+    list.innerHTML = fits.map(f=>`<li><strong>${f.path}</strong> — ${labelFor(f.pct)} (${f.pct}%)</li>`).join('');
+    if (block) block.style.display = fits.length ? 'block' : 'none';
   }
 
-  // Build Explorer responses table and hook the toggle
+  // Build responses table and hook checkbox
+  const rr = qs('#resultsResponses');
   function responsesTable(){
     const rowsHTML = rows.map((r,i)=>{
       const q = FOUNDATION.questions[i]?.label || r.question || `Question ${i+1}`;
-      const label = r.label || '—';
-      return `<tr><td>${q}</td><td>${label}</td></tr>`;
+      const label = r.label || '—'; return `<tr><td>${q}</td><td>${label}</td></tr>`;
     }).join('');
-    return `<h4>Explorer — Foundational Skills</h4>
-            <table><thead><tr><th>Question</th><th>Your Response</th></tr></thead>
-            <tbody>${rowsHTML}</tbody></table>`;
+    return `<h4>Explorer — Foundational Skills</h4><table><thead><tr><th>Question</th><th>Your Response</th></tr></thead><tbody>${rowsHTML}</tbody></table>`;
   }
-  const rr = qs('#resultsResponses');
   if (rr){
     rr.innerHTML = responsesTable();
-    // Toggle visibility
     const chk = qs('#showResponses');
-    if (chk){
-      rr.classList.toggle('hidden', !chk.checked);
-      chk.onchange = ()=> rr.classList.toggle('hidden', !chk.checked);
-    }
+    if (chk){ rr.classList.toggle('hidden', !chk.checked); chk.onchange = ()=> rr.classList.toggle('hidden', !chk.checked); }
   }
 
-  // Show Results panel
+  // Show Results
   ['#landing','#intro','#survey','#explorer','#summary','#workflow'].forEach(id=>qs(id)?.classList.add('hidden'));
   qs('#results')?.classList.remove('hidden');
-  // Reset KPI boxes (Explorer doesn't calculate Core/Established/Emerging)
-  qs('#corePct').textContent = '—';
-  qs('#estPct').textContent = '—';
-  qs('#emgPct').textContent = '—';
-
+  // Explorer does not compute section KPIs
+  qs('#corePct').textContent = '—'; qs('#estPct').textContent = '—'; qs('#emgPct').textContent = '—';
   window.scrollTo({ top: qs('#results')?.offsetTop || 0, behavior: 'smooth' });
 }
 
-// Wire Explorer actions & improve printing
 document.addEventListener('DOMContentLoaded', ()=>{
   qs('#explore')?.addEventListener('click', renderExplorer);
   qs('#explorerCalc')?.addEventListener('click', computeExplorerResults);
-  qs('#explorerCancel')?.addEventListener('click', ()=>{
-    qs('#explorer')?.classList.add('hidden');
-    qs('#landing')?.classList.remove('hidden');
-    window.scrollTo({top:0, behavior:'smooth'});
-  });
-
-  // Ensure print includes responses if checkbox is checked
-  const printBtn = qs('#printBtn');
-  if (printBtn){
-    printBtn.addEventListener('click', ()=>{
-      const rr = qs('#resultsResponses');
-      const chk = qs('#showResponses');
-      if (rr && chk && chk.checked) rr.classList.remove('hidden');
-      window.print();
-    });
-  }
+  qs('#explorerCancel')?.addEventListener('click', ()=>{ qs('#explorer')?.classList.add('hidden'); qs('#landing')?.classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); });
+  // Ensure print includes responses if checkbox is on
+  qs('#printBtn')?.addEventListener('click', ()=>{ const rr = qs('#resultsResponses'), chk = qs('#showResponses'); if (rr && chk && chk.checked) rr.classList.remove('hidden'); window.print(); });
 });
-/* ===== End Explorer Mode — v0.4 ===== */
+/* ===== End Explorer Mode — v0.6 ===== */
 
 </script>
 </body>
